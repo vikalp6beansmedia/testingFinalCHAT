@@ -11,6 +11,14 @@ function safeTrim(v: string | undefined | null) {
   return (v ?? "").trim();
 }
 
+function siteOrigin() {
+  // Prefer explicit env, else fallback to current deployed domain
+  const envUrl = safeTrim(process.env.NEXTAUTH_URL);
+  if (envUrl) return envUrl.replace(/\/+$/, "");
+  // fallback for your project (works even if NEXTAUTH_URL missing)
+  return "https://creator-farm-phase6-razorpay-2-y8ua.vercel.app";
+}
+
 export async function POST(req: Request) {
   try {
     // 1) Must be signed in
@@ -23,7 +31,11 @@ export async function POST(req: Request) {
     }
 
     // Ensure user exists in DB (prevents FK issues later)
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true },
+    });
+
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 400 });
     }
@@ -50,7 +62,8 @@ export async function POST(req: Request) {
       },
     });
 
-    const planId = tier === "BASIC" ? settings.razorpayBasicPlanId : settings.razorpayProPlanId;
+    const planId =
+      tier === "BASIC" ? settings.razorpayBasicPlanId : settings.razorpayProPlanId;
 
     if (!planId) {
       return NextResponse.json({ error: "Missing plan id" }, { status: 400 });
@@ -71,10 +84,9 @@ export async function POST(req: Request) {
       plan_id: planId,
       customer_notify: 1,
       quantity: 1,
-      // keep high number for ongoing monthly membership
       total_count: 120,
       notes: {
-        // IMPORTANT: webhook will read this and link to correct user
+        // webhook/callback will read this and link to correct user
         userId,
         tier,
         email,
@@ -104,12 +116,34 @@ export async function POST(req: Request) {
       );
     }
 
-    // 6) Return subscription + payment short_url (if available)
+    // ✅ NEW: Provide callback URL for redirect after successful payment
+    const callbackUrl = `${siteOrigin()}/api/razorpay/callback`;
+
+    // ✅ Return what frontend needs to open Razorpay Checkout
     return NextResponse.json({
       subscriptionId: rpJson.id,
       status: rpJson.status,
-      shortUrl: rpJson.short_url || null,
       planId: rpJson.plan_id || planId,
+
+      // required by Checkout
+      keyId,
+      callbackUrl,
+
+      // optional nice-to-have for prefill
+      customer: {
+        name: user.name || "",
+        email: user.email || email,
+      },
+
+      // keep notes in frontend too (useful for debugging)
+      notes: {
+        userId,
+        tier,
+        email,
+      },
+
+      // Keep shortUrl as fallback (your UI still supports it)
+      shortUrl: rpJson.short_url || null,
     });
   } catch (e: any) {
     console.log("Subscription route crashed:", e);

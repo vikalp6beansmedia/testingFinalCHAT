@@ -3,6 +3,35 @@
 import { useState } from "react";
 import Nav from "@/components/Nav";
 
+declare global {
+  interface Window {
+    Razorpay?: any;
+  }
+}
+
+const RZP_SRC = "https://checkout.razorpay.com/v1/checkout.js";
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.Razorpay) return resolve(true);
+
+    const existing = document.querySelector(`script[src="${RZP_SRC}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true));
+      existing.addEventListener("error", () => resolve(false));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = RZP_SRC;
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function MembershipPage() {
   const [msg, setMsg] = useState<string>("");
 
@@ -23,7 +52,62 @@ export default function MembershipPage() {
         return;
       }
 
-      // If Razorpay returns short_url, open it
+      // Preferred flow: open Razorpay Checkout with subscription_id (supports callback_url redirect)
+      // Expect backend to return:
+      // { subscriptionId, keyId, callbackUrl, customer?: { name,email,contact }, notes?: {...} }
+      if (data?.subscriptionId) {
+        const ok = await loadRazorpayScript();
+        if (!ok || !window.Razorpay) {
+          setMsg("Failed to load Razorpay Checkout. Please try again.");
+          return;
+        }
+
+        const keyId =
+          data?.keyId || (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID as string | undefined);
+
+        if (!keyId) {
+          setMsg(
+            "Missing Razorpay keyId. (We will update the create API to return keyId.)"
+          );
+          return;
+        }
+
+        setMsg("Opening Razorpay Checkout...");
+
+        const options: any = {
+          key: keyId,
+          subscription_id: data.subscriptionId,
+          name: data?.brandName || "CreatorFarm",
+          description: data?.description || `${tier} membership`,
+          image: data?.logoUrl || undefined,
+
+          // THIS enables redirect back to your site after success
+          redirect: true,
+          callback_url: data?.callbackUrl || "/api/razorpay/callback",
+
+          prefill: data?.customer
+            ? {
+                name: data.customer.name || "",
+                email: data.customer.email || "",
+                contact: data.customer.contact || "",
+              }
+            : undefined,
+
+          notes: data?.notes || { tier },
+
+          theme: { color: "#2563eb" },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", (resp: any) => {
+          setMsg(resp?.error?.description || "Payment failed.");
+        });
+
+        rzp.open();
+        return;
+      }
+
+      // Fallback: older flow using Razorpay short URL (kept as backup)
       if (data?.shortUrl) {
         setMsg("Opening Razorpay...");
         window.location.href = data.shortUrl;
@@ -43,7 +127,7 @@ export default function MembershipPage() {
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl">
           <h1 className="text-3xl font-semibold text-white">Membership</h1>
           <p className="mt-2 text-white/70">
-            Click a tier to create a Razorpay subscription (server-side). You must be signed in.
+            Click a tier to start a Razorpay subscription. You must be signed in.
           </p>
 
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
