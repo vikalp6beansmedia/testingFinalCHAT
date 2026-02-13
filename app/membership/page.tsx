@@ -52,9 +52,6 @@ export default function MembershipPage() {
         return;
       }
 
-      // Preferred flow: open Razorpay Checkout with subscription_id (supports callback_url redirect)
-      // Expect backend to return:
-      // { subscriptionId, keyId, callbackUrl, customer?: { name,email,contact }, notes?: {...} }
       if (data?.subscriptionId) {
         const ok = await loadRazorpayScript();
         if (!ok || !window.Razorpay) {
@@ -62,13 +59,9 @@ export default function MembershipPage() {
           return;
         }
 
-        const keyId =
-          data?.keyId || (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID as string | undefined);
-
+        const keyId = data?.keyId as string | undefined;
         if (!keyId) {
-          setMsg(
-            "Missing Razorpay keyId. (We will update the create API to return keyId.)"
-          );
+          setMsg("Missing Razorpay keyId from server.");
           return;
         }
 
@@ -81,9 +74,9 @@ export default function MembershipPage() {
           description: data?.description || `${tier} membership`,
           image: data?.logoUrl || undefined,
 
-          // THIS enables redirect back to your site after success
           redirect: true,
           callback_url: data?.callbackUrl || "/api/razorpay/callback",
+          callback_method: "get",
 
           prefill: data?.customer
             ? {
@@ -94,7 +87,6 @@ export default function MembershipPage() {
             : undefined,
 
           notes: data?.notes || { tier },
-
           theme: { color: "#2563eb" },
         };
 
@@ -107,7 +99,6 @@ export default function MembershipPage() {
         return;
       }
 
-      // Fallback: older flow using Razorpay short URL (kept as backup)
       if (data?.shortUrl) {
         setMsg("Opening Razorpay...");
         window.location.href = data.shortUrl;

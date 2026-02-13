@@ -27,3 +27,10 @@ export async function GET(req: Request) {
 
   return NextResponse.redirect(dest, { status: 302 });
 }
+
+// extra safety (if Razorpay ever POSTs)
+export async function POST() {
+  const dest = new URL(`${siteOrigin()}/membership/success`);
+  return NextResponse.redirect(dest, { status: 302 });
+}
+I 
