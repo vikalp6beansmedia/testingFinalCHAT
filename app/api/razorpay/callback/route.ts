@@ -33,4 +33,3 @@ export async function POST() {
   const dest = new URL(`${siteOrigin()}/membership/success`);
   return NextResponse.redirect(dest, { status: 302 });
 }
-I 
