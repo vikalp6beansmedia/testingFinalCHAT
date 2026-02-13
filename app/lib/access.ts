@@ -3,11 +3,23 @@ import { authOptions } from "@/lib/authOptions";
 
 export async function getAuthedSession() {
   const session = await getServerSession(authOptions);
+
+  const email = (session?.user?.email || "").toLowerCase().trim();
+
+  // session fields (preferred)
   const uid = (session as any)?.uid as string | undefined;
-  const role = String((session as any)?.role || "USER");
-  const tier = String((session as any)?.tier || "NONE");
-  const email = session?.user?.email || null;
-  return { session, uid, role, tier, email };
+  let role = String((session as any)?.role || "").toUpperCase();
+  let tier = String((session as any)?.tier || "").toUpperCase();
+
+  // Fallback: if session doesn't carry role/tier (common on Vercel after changes),
+  // treat ADMIN_EMAIL as admin.
+  const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+  const isAdminEmail = !!adminEmail && email === adminEmail;
+
+  if (!role) role = isAdminEmail ? "ADMIN" : "USER";
+  if (!tier) tier = isAdminEmail ? "PRO" : "NONE";
+
+  return { session, uid, role, tier, email: email || null };
 }
 
 export function isActiveTier(tier: string) {
