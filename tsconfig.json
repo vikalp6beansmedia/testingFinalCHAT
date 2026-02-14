@@ -18,12 +18,7 @@
 
     "baseUrl": ".",
     "paths": {
-<<<<<<< HEAD
-      "@/*": ["./*"],
-      "@/app/*": ["./app/*"]
-=======
-      "@/*": ["./app/*"]
->>>>>>> be71332 (Master plus: Patreon-style posts + admin CRUD)
+      "@/*": ["./*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
