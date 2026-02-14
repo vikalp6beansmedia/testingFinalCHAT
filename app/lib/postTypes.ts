@@ -1,7 +1,7 @@
 export type PostType = "VIDEO" | "IMAGE";
 export type AccessType = "FREE" | "BASIC" | "PRO" | "PAID";
 
-export type Post = {
+export type PostDTO = {
   id: string;
   title: string;
   excerpt: string;
@@ -10,7 +10,7 @@ export type Post = {
   price: number;
   mediaUrl: string;
   duration?: string | null;
-  createdAt: string; // ISO string
+  createdAt: string; // ISO
 };
 
 export function isTierActive(tier: string) {
@@ -18,12 +18,12 @@ export function isTierActive(tier: string) {
   return t === "BASIC" || t === "PRO";
 }
 
-export function canAccessPost(postAccess: AccessType, tier: string) {
+export function canAccessPost(access: AccessType, tier: string) {
   const t = String(tier || "NONE").toUpperCase();
-  if (postAccess === "FREE") return true;
-  if (postAccess === "BASIC") return t === "BASIC" || t === "PRO";
-  if (postAccess === "PRO") return t === "PRO";
-  // PAID: future per-post payments; for now treat as locked unless PRO
-  if (postAccess === "PAID") return t === "PRO";
+  if (access === "FREE") return true;
+  if (access === "BASIC") return t === "BASIC" || t === "PRO";
+  if (access === "PRO") return t === "PRO";
+  // PAID is future per-post payments. For now, keep it locked unless PRO.
+  if (access === "PAID") return t === "PRO";
   return false;
 }

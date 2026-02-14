@@ -53,21 +53,6 @@ model User {
   conversation Conversation?
 }
 
-model Post {
-  id        String     @id @default(cuid())
-  title     String
-  excerpt   String
-  type      PostType
-  access    AccessType @default(FREE)
-  price     Int        @default(0) // only used when access=PAID
-  mediaUrl  String
-  duration  String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  @@index([createdAt])
-}
-
 model Account {
   id                 String  @id @default(cuid())
   userId             String
@@ -159,4 +144,19 @@ model Message {
   createdAt  DateTime @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+model Post {
+  id        String     @id @default(cuid())
+  title     String
+  excerpt   String
+  type      PostType
+  access    AccessType @default(FREE)
+  price     Int        @default(0) // only when access=PAID
+  mediaUrl  String
+  duration  String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([createdAt])
 }

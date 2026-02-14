@@ -74,3 +74,19 @@ Run one of these (recommended):
 Then:
 - `npm install`
 - `npm run dev`
+
+## Posts Feed (Patreon-style)
+
+- Home (`/`) shows a posts feed.
+- If a user is not subscribed, locked posts show blurred preview with an unlock CTA.
+- Admin can create / edit / delete posts at `/admin/posts`.
+
+### Migration
+
+This build includes a migration folder under `prisma/migrations/`.
+
+On production (Vercel) you should run:
+
+```bash
+npx prisma migrate deploy
+```

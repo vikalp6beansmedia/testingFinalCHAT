@@ -1,234 +1,153 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
+import type { AccessType, PostDTO, PostType } from "@/lib/postTypes";
 
-type PostForm = {
-  title: string;
-  excerpt: string;
-  type: "VIDEO" | "IMAGE";
-  access: "FREE" | "BASIC" | "PRO" | "PAID";
-  price: number;
-  mediaUrl: string;
-  duration: string;
-};
+const ACCESS: AccessType[] = ["FREE", "BASIC", "PRO", "PAID"];
+const TYPES: PostType[] = ["VIDEO", "IMAGE"];
 
-const empty: PostForm = {
-  title: "",
-  excerpt: "",
-  type: "VIDEO",
-  access: "FREE",
-  price: 0,
-  mediaUrl: "",
-  duration: "",
-};
-
-export default function AdminPostEditPage() {
-  const params = useParams<{ id: string }>();
-  const id = params?.id || "";
-  const isNew = id === "new";
+export default function AdminEditPostPage() {
+  const params = useParams();
   const router = useRouter();
+  const id = String((params as any)?.id || "");
 
-  const [loading, setLoading] = useState(!isNew);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [form, setForm] = useState<PostForm>(empty);
+  const [msg, setMsg] = useState("");
+  const [form, setForm] = useState({
+    title: "",
+    excerpt: "",
+    type: "VIDEO" as PostType,
+    access: "FREE" as AccessType,
+    price: 0,
+    mediaUrl: "",
+    duration: "",
+  });
 
-  useEffect(() => {
-    if (isNew) return;
+  async function load() {
+    setLoading(true);
+    setMsg("");
 
-    let alive = true;
-    (async () => {
-      setLoading(true);
-      setErr(null);
-      try {
-        const res = await fetch(`/api/admin/posts/${id}`, { cache: "no-store" });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || "Failed");
-        if (!alive) return;
-        const p = json.post;
-        setForm({
-          title: p.title || "",
-          excerpt: p.excerpt || "",
-          type: (String(p.type || "VIDEO").toUpperCase() as any) || "VIDEO",
-          access: (String(p.access || "FREE").toUpperCase() as any) || "FREE",
-          price: Number(p.price || 0),
-          mediaUrl: p.mediaUrl || "",
-          duration: p.duration || "",
-        });
-      } catch (e: any) {
-        if (!alive) return;
-        setErr(e?.message || "Failed");
-      } finally {
-        if (!alive) return;
-        setLoading(false);
-      }
-    })();
+    const res = await fetch(`/api/admin/posts/${id}`, { cache: "no-store" });
+    const data = await res.json();
 
-    return () => {
-      alive = false;
-    };
-  }, [id, isNew]);
+    if (!res.ok) {
+      setMsg(data?.error || "Failed to load post");
+      setLoading(false);
+      return;
+    }
 
-  const showPrice = useMemo(() => form.access === "PAID", [form.access]);
+    const p: PostDTO = data.post;
+    setForm({
+      title: p.title,
+      excerpt: p.excerpt,
+      type: p.type,
+      access: p.access,
+      price: p.price,
+      mediaUrl: p.mediaUrl,
+      duration: p.duration || "",
+    });
+
+    setLoading(false);
+  }
 
   async function save() {
     setSaving(true);
-    setErr(null);
-    try {
-      const payload = {
+    setMsg("");
+
+    const res = await fetch(`/api/admin/posts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         ...form,
-        price: showPrice ? Number(form.price || 0) : 0,
-        duration: form.duration?.trim() ? form.duration.trim() : null,
-      };
+        price: Number(form.price || 0),
+        duration: form.duration || null,
+      }),
+    });
 
-      if (isNew) {
-        const res = await fetch(`/api/admin/posts`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || "Failed");
-        router.replace(`/admin/posts/${json.post.id}`);
-      } else {
-        const res = await fetch(`/api/admin/posts/${id}`, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || "Failed");
-      }
-      alert("Saved");
-    } catch (e: any) {
-      setErr(e?.message || "Failed");
-    } finally {
+    const data = await res.json();
+    if (!res.ok) {
+      setMsg(data?.error || "Save failed");
       setSaving(false);
+      return;
     }
+
+    setMsg("Saved ✅");
+    setSaving(false);
   }
 
-  async function del() {
-    if (isNew) return;
-    if (!confirm("Delete this post?")) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      const res = await fetch(`/api/admin/posts/${id}/delete`, { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed");
-      router.push("/admin/posts");
-    } catch (e: any) {
-      setErr(e?.message || "Failed");
-    } finally {
-      setSaving(false);
-    }
-  }
+  useEffect(() => {
+    if (id) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   return (
     <>
       <Nav />
-      <div className="container">
+      <div className="container mobile-shell">
         <div className="card" style={{ padding: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: 20, fontWeight: 950 }}>{isNew ? "New Post" : "Edit Post"}</div>
-              <div className="muted" style={{ fontSize: 13 }}>
-                This controls what appears on the Home feed.
+              <h1 style={{ margin: 0 }}>Edit post</h1>
+              <div className="small muted" style={{ marginTop: 6 }}>
+                ID: <span className="mono">{id}</span>
               </div>
             </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              {!isNew ? (
-                <button className="btn" onClick={del} disabled={saving}>
-                  Delete
-                </button>
-              ) : null}
-              <button className="btn btnPrimary" onClick={save} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button className="btn" onClick={() => router.push("/admin/posts")}>
+                Back
               </button>
+              <a className="btn" href="/" target="_blank" rel="noreferrer">
+                View feed
+              </a>
             </div>
           </div>
 
           <div className="hr" />
 
-          {err ? <div className="muted">Error: {err}</div> : null}
           {loading ? (
-            <div className="muted">Loading…</div>
+            <div className="small muted">Loading…</div>
           ) : (
-            <div style={{ display: "grid", gap: 12 }}>
-              <div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                  Title
-                </div>
-                <input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <div style={{ display: "grid", gap: 10 }}>
+              <input className="input" placeholder="Title" value={form.title} onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))} />
+              <textarea className="input" placeholder="Excerpt" rows={4} value={form.excerpt} onChange={(e) => setForm((s) => ({ ...s, excerpt: e.target.value }))} />
+
+              <div className="row2">
+                <select className="input" value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value as PostType }))}>
+                  {TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                <select className="input" value={form.access} onChange={(e) => setForm((s) => ({ ...s, access: e.target.value as AccessType }))}>
+                  {ACCESS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                  Excerpt
-                </div>
-                <textarea
+              {form.access === "PAID" ? (
+                <input
                   className="input"
-                  style={{ minHeight: 90, paddingTop: 10 }}
-                  value={form.excerpt}
-                  onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
+                  placeholder="Price (₹)"
+                  value={String(form.price)}
+                  onChange={(e) => setForm((s) => ({ ...s, price: Number(e.target.value || 0) }))}
                 />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                    Type
-                  </div>
-                  <select className="input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as any })}>
-                    <option value="VIDEO">VIDEO</option>
-                    <option value="IMAGE">IMAGE</option>
-                  </select>
-                </div>
-
-                <div>
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                    Access
-                  </div>
-                  <select className="input" value={form.access} onChange={(e) => setForm({ ...form, access: e.target.value as any })}>
-                    <option value="FREE">FREE</option>
-                    <option value="BASIC">BASIC</option>
-                    <option value="PRO">PRO</option>
-                    <option value="PAID">PAID</option>
-                  </select>
-                </div>
-              </div>
-
-              {showPrice ? (
-                <div>
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                    Price (INR)
-                  </div>
-                  <input
-                    className="input"
-                    inputMode="numeric"
-                    value={String(form.price)}
-                    onChange={(e) => setForm({ ...form, price: Number(e.target.value || 0) })}
-                  />
-                </div>
               ) : null}
 
-              <div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                  Media URL (video/image)
-                </div>
-                <input className="input" value={form.mediaUrl} onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })} />
-              </div>
+              <input className="input" placeholder="Media URL" value={form.mediaUrl} onChange={(e) => setForm((s) => ({ ...s, mediaUrl: e.target.value }))} />
+              <input className="input" placeholder="Duration (optional)" value={form.duration} onChange={(e) => setForm((s) => ({ ...s, duration: e.target.value }))} />
 
-              <div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                  Duration (optional, e.g. 08:40)
-                </div>
-                <input className="input" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
-              </div>
+              <button className="btn btnPrimary full" onClick={save} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+
+              {msg ? <div className="small muted">{msg}</div> : null}
             </div>
           )}
         </div>

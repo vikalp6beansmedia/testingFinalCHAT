@@ -1,25 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
-
-function isAdminEmail(email?: string | null) {
-  const admin = (process.env.ADMIN_EMAIL ?? "").toLowerCase().trim();
-  const e = (email ?? "").toLowerCase().trim();
-  return !!admin && !!e && admin === e;
-}
-
-async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!isAdminEmail(session?.user?.email)) return null;
-  return session;
-}
+import { getAuthedSession, isAdminRole } from "@/lib/access";
 
 export async function GET() {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { role } = await getAuthedSession();
+  if (!isAdminRole(role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const posts = await prisma.post.findMany({ orderBy: { createdAt: "desc" } });
+  const posts = await prisma.post.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
   return NextResponse.json({
     posts: posts.map((p) => ({
       id: p.id,
@@ -36,8 +27,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { role } = await getAuthedSession();
+  if (!isAdminRole(role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json();
 
@@ -53,7 +44,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const post = await prisma.post.create({
+  const created = await prisma.post.create({
     data: {
       title,
       excerpt,
@@ -65,11 +56,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({
-    ok: true,
-    post: {
-      id: post.id,
-      createdAt: post.createdAt.toISOString(),
-    },
-  });
+  return NextResponse.json({ ok: true, id: created.id });
 }

@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import Header from "./_components/Header";
-import CreatorHero from "./_components/CreatorHero";
-import FeedToolbar from "./_components/FeedToolbar";
-import PostCard from "./_components/PostCard";
-import type { Post } from "@/lib/postTypes";
+import Nav from "@/components/Nav";
+import CreatorHero from "@/components/CreatorHero";
+import FeedToolbar from "@/components/FeedToolbar";
+import PostCard from "@/components/PostCard";
+import type { PostDTO } from "@/lib/postTypes";
 
 export default function Home() {
   const { data } = useSession();
   const tier = String((data as any)?.tier ?? "NONE").toUpperCase();
 
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
 
@@ -32,6 +32,7 @@ export default function Home() {
         setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
@@ -45,7 +46,7 @@ export default function Home() {
 
   return (
     <>
-      <Header />
+      <Nav />
       <CreatorHero />
       <FeedToolbar onSearch={setQ} />
 
@@ -60,7 +61,7 @@ export default function Home() {
       ) : (
         <div className="container mobile-shell" style={{ marginTop: 12, paddingBottom: 24 }}>
           <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontWeight: 950 }}>No posts yet</div>
+            <div style={{ fontWeight: 900 }}>No posts yet</div>
             <div className="small muted" style={{ marginTop: 6 }}>
               Admin can add posts from <b>Posts Admin</b>.
             </div>
@@ -70,7 +71,7 @@ export default function Home() {
 
       <div className="container mobile-shell" style={{ paddingBottom: 40, marginTop: 14 }}>
         <div className="small muted" style={{ textAlign: "center" }}>
-          © CreatorFarm • Built for one creator (Phase6 MASTER)
+          © CreatorFarm • Patreon-style feed (Phase6 MASTER + Posts)
         </div>
       </div>
     </>
