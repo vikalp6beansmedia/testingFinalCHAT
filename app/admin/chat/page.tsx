@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Nav from "@/app/components/Nav";
+import Nav from "@/components/Nav";
 
 type Convo = { id: string; email: string | null; name: string | null; updatedAt: string };
 type Msg = { id: string; senderRole: string; text: string; createdAt: string };
