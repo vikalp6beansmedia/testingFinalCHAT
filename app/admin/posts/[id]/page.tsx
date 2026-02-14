@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Nav from "@/components/Nav";
+import Nav from "@/app/components/Nav";
 import type { AccessType, PostDTO, PostType } from "@/lib/postTypes";
 
 const ACCESS: AccessType[] = ["FREE", "BASIC", "PRO", "PAID"];

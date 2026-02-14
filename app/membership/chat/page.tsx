@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Nav from "@/components/Nav";
+import Nav from "@/app/components/Nav";
 
 type Msg = { id: string; senderRole: string; text: string; createdAt: string };
 

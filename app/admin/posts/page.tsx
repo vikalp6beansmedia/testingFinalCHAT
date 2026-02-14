@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Nav from "@/components/Nav";
+import Nav from "@/app/components/Nav";
 import type { PostDTO, AccessType, PostType } from "@/lib/postTypes";
 
 const ACCESS: AccessType[] = ["FREE", "BASIC", "PRO", "PAID"];
