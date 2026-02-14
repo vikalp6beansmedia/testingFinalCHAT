@@ -47,6 +47,7 @@ export default function Nav() {
 
           {hasChat ? <Link className="pill" href="/membership/chat">Chat</Link> : null}
           {isAdmin ? <Link className="pill" href="/admin/chat">Admin Chat</Link> : null}
+          {isAdmin ? <Link className="pill" href="/admin/posts">Posts Admin</Link> : null}
 
           <Link className="pill" href="/admin/settings">Admin</Link>
           <span className="pill">

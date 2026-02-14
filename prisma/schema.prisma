@@ -18,6 +18,18 @@ enum Role {
   USER
 }
 
+enum PostType {
+  VIDEO
+  IMAGE
+}
+
+enum AccessType {
+  FREE
+  BASIC
+  PRO
+  PAID
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String?   @unique
@@ -39,6 +51,21 @@ model User {
 
   // Chat (1:1 admin support chat)
   conversation Conversation?
+}
+
+model Post {
+  id        String     @id @default(cuid())
+  title     String
+  excerpt   String
+  type      PostType
+  access    AccessType @default(FREE)
+  price     Int        @default(0) // only used when access=PAID
+  mediaUrl  String
+  duration  String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([createdAt])
 }
 
 model Account {

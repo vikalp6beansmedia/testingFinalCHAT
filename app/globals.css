@@ -1,53 +1,134 @@
-:root { color-scheme: dark; }
+:root{
+  color-scheme: dark;
+
+  --bg: #0b0b0f;
+  --panel: rgba(255,255,255,.06);
+  --panel2: rgba(255,255,255,.08);
+  --text: #f2f2f5;
+  --muted: rgba(242,242,245,.7);
+  --muted2: rgba(242,242,245,.55);
+  --stroke: rgba(255,255,255,.08);
+  --stroke2: rgba(255,255,255,.12);
+  --blue: #4f6cff;
+  --blue2:#2d43cc;
+  --chip:#1c1d2a;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  background: radial-gradient(1200px 600px at 50% 0%, rgba(60,90,255,.25), transparent),
+  background: radial-gradient(1000px 600px at 50% -200px, rgba(79,108,255,.22), transparent 60%),
+              radial-gradient(900px 500px at 20% 0px, rgba(255,255,255,.08), transparent 55%),
               linear-gradient(180deg, #040612, #050812 40%, #03040a);
-  color:#e7eaff;
+  color: var(--text);
 }
+
 a{color:inherit; text-decoration:none}
-.container{max-width:980px; margin:0 auto; padding:24px;}
+
+.container{max-width:980px; margin:0 auto; padding:18px;}
+.mobile-shell{ max-width: 420px; }
+
 .card{
   border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.06);
+  background: var(--panel);
   border-radius:18px;
   box-shadow: 0 24px 70px rgba(0,0,0,.45);
 }
+
+.nav{ padding:14px; display:flex; justify-content:space-between; gap:14px; align-items:center; }
+
+.muted{ color: var(--muted); }
+.small{ font-size: 12px; color: var(--muted); }
+.hr{ height:1px; background: rgba(255,255,255,.10); margin:14px 0; }
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+  font-weight:800;
+  font-size:12px;
+}
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.05);
+  font-weight:800;
+  font-size:12px;
+  color: var(--muted);
+}
+.chip.ok{ border-color: rgba(60, 255, 170, .22); color: rgba(175,255,225,.85); }
+.chip.warn{ border-color: rgba(255, 170, 60, .22); color: rgba(255,215,175,.90); }
+
 .btn{
   cursor:pointer;
   padding:12px 14px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.08);
+  background: rgba(255,255,255,.08);
   color:#fff;
-  font-weight:600;
+  font-weight:800;
 }
-.btnPrimary{
-  background:linear-gradient(180deg, rgba(70,120,255,1), rgba(30,70,210,1));
-  border-color: rgba(120,160,255,.55);
+.btn:hover{ filter: brightness(1.07); }
+
+.btnPrimary, .btn.primary{
+  background: linear-gradient(180deg, rgba(79,108,255,.95), rgba(45,67,204,.95));
+  border-color: rgba(79,108,255,.45);
 }
+.full{ width:100%; }
+
 .input{
   width:100%;
   padding:12px 12px;
   border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(0,0,0,.25);
-  color:#fff;
-  outline:none;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.28);
+  color: var(--text);
+  outline: none;
 }
-.muted{color:rgba(255,255,255,.7)}
-.row{display:grid; grid-template-columns: 1fr 240px; gap:12px; align-items:center;}
-@media (max-width: 720px){ .row{grid-template-columns: 1fr;}}
-.nav{
-  display:flex; gap:14px; align-items:center; justify-content:space-between;
-  padding:14px 18px;
+.input::placeholder{ color: rgba(242,242,245,.45); }
+
+.linkbtn{
+  border:none;
+  background:transparent;
+  color: var(--muted);
+  font-weight: 900;
+  cursor:pointer;
+  padding: 0;
 }
-.pill{
-  padding:8px 10px; border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(0,0,0,.2);
-  font-size:12px;
+.linkbtn:hover{ color: var(--text); }
+
+.modalBackdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 18px;
+  z-index: 50;
 }
-.grid3{display:grid; grid-template-columns: repeat(3, 1fr); gap:14px;}
-@media (max-width: 900px){ .grid3{grid-template-columns:1fr}}
+
+.modal{
+  width: 100%;
+  max-width: 420px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(10,12,20,.95);
+  box-shadow: 0 30px 100px rgba(0,0,0,.6);
+  padding: 14px;
+}
+
+@media (min-width: 981px){
+  .mobile-shell{ max-width: 520px; }
+}

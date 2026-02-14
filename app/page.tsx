@@ -1,20 +1,76 @@
-import Nav from "@/components/Nav";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import Header from "./_components/Header";
+import CreatorHero from "./_components/CreatorHero";
+import FeedToolbar from "./_components/FeedToolbar";
+import PostCard from "./_components/PostCard";
+import type { Post } from "@/lib/postTypes";
 
 export default function Home() {
+  const { data } = useSession();
+  const tier = String((data as any)?.tier ?? "NONE").toUpperCase();
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/posts", { cache: "no-store" });
+        const json = await res.json();
+        if (!alive) return;
+        setPosts(Array.isArray(json?.posts) ? json.posts : []);
+      } catch {
+        if (!alive) return;
+        setPosts([]);
+      } finally {
+        if (!alive) return;
+        setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return posts;
+    return posts.filter((p) => (p.title + " " + p.excerpt).toLowerCase().includes(s));
+  }, [posts, q]);
+
   return (
     <>
-      <Nav />
-      <div className="container">
-        <div className="card" style={{padding:24}}>
-          <h1 style={{margin:"0 0 8px", fontSize:34}}>Phase 6 (Clean)</h1>
-          <p className="muted" style={{marginTop:0}}>
-            Admin sets Razorpay plan IDs → Membership page uses them to create a subscription.
-          </p>
-          <ol className="muted" style={{lineHeight:1.9}}>
-            <li>Go to <b>/signin</b> and login with ADMIN_EMAIL / ADMIN_PASSWORD from .env</li>
-            <li>Go to <b>/admin/settings</b> and save plan IDs</li>
-            <li>Go to <b>/membership</b> and click Join Basic / Join Pro</li>
-          </ol>
+      <Header />
+      <CreatorHero />
+      <FeedToolbar onSearch={setQ} />
+
+      {loading ? (
+        <div className="container mobile-shell" style={{ marginTop: 12 }}>
+          <div className="card" style={{ padding: 14 }}>
+            <div className="small muted">Loading posts…</div>
+          </div>
+        </div>
+      ) : filtered.length ? (
+        filtered.map((p) => <PostCard key={p.id} post={p} tier={tier} />)
+      ) : (
+        <div className="container mobile-shell" style={{ marginTop: 12, paddingBottom: 24 }}>
+          <div className="card" style={{ padding: 14 }}>
+            <div style={{ fontWeight: 950 }}>No posts yet</div>
+            <div className="small muted" style={{ marginTop: 6 }}>
+              Admin can add posts from <b>Posts Admin</b>.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="container mobile-shell" style={{ paddingBottom: 40, marginTop: 14 }}>
+        <div className="small muted" style={{ textAlign: "center" }}>
+          © CreatorFarm • Built for one creator (Phase6 MASTER)
         </div>
       </div>
     </>
