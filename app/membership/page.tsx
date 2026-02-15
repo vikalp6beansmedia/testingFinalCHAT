@@ -87,7 +87,7 @@ export default function MembershipPage() {
             : undefined,
 
           notes: data?.notes || { tier },
-          theme: { color: "#2563eb" },
+          theme: { color: "#ffffff" },
         };
 
         const rzp = new window.Razorpay(options);
@@ -112,49 +112,81 @@ export default function MembershipPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <>
       <Nav />
-      <div className="mx-auto max-w-4xl px-6 py-10">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl">
-          <h1 className="text-3xl font-semibold text-white">Membership</h1>
-          <p className="mt-2 text-white/70">
-            Click a tier to start a Razorpay subscription. You must be signed in.
-          </p>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="text-xl font-semibold text-white">Basic</div>
-              <div className="mt-1 text-white/70">Unlock BASIC posts.</div>
-              <button
-                onClick={() => join("BASIC")}
-                className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-500"
-              >
-                Join Basic
-              </button>
+      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div>
+              <h1 style={{ margin: 0 }}>Membership</h1>
+              <div className="small muted" style={{ marginTop: 6 }}>
+                Choose a tier to start a Razorpay subscription. You must be signed in.
+              </div>
+            </div>
+            <a className="btn" href="/" style={{ display: "inline-flex", alignItems: "center", height: 44 }}>
+              Back to feed
+            </a>
+          </div>
+
+          <div className="hr" />
+
+          <div className="grid3">
+            <div className="card" style={{ padding: 14, background: "rgba(255,255,255,.04)" }}>
+              <div style={{ fontWeight: 950, fontSize: 16 }}>Basic</div>
+              <div className="small muted" style={{ marginTop: 6 }}>
+                Unlock <b>BASIC</b> posts + member chat.
+              </div>
+
+              <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                <div className="notice small">
+                  • Locked posts become <b>unblurred</b>
+                  <br />• Access to <b>/membership/chat</b>
+                </div>
+                <button onClick={() => join("BASIC")} className="btn btnPrimary full">
+                  Join Basic
+                </button>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="text-xl font-semibold text-white">Pro</div>
-              <div className="mt-1 text-white/70">Unlock PRO posts (includes BASIC).</div>
-              <button
-                onClick={() => join("PRO")}
-                className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-500"
-              >
-                Join Pro
-              </button>
+            <div className="card" style={{ padding: 14, background: "rgba(255,255,255,.04)" }}>
+              <div style={{ fontWeight: 950, fontSize: 16 }}>Pro</div>
+              <div className="small muted" style={{ marginTop: 6 }}>
+                Unlock <b>PRO</b> posts (includes BASIC) + member chat.
+              </div>
+
+              <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                <div className="notice small">
+                  • Everything in <b>Basic</b>
+                  <br />• Highest access for locked drops
+                </div>
+                <button onClick={() => join("PRO")} className="btn btnPrimary full">
+                  Join Pro
+                </button>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="text-xl font-semibold text-white">Note</div>
-              <div className="mt-2 text-white/70">
-                If you get “Missing plan id”, open Admin → Settings and save both plan IDs.
+            <div className="card" style={{ padding: 14, background: "rgba(0,0,0,.18)" }}>
+              <div style={{ fontWeight: 900 }}>Note</div>
+              <div className="small muted" style={{ marginTop: 8 }}>
+                If you get <b>“Missing plan id”</b>, open <b>Admin → Settings</b> and save both Razorpay plan IDs.
+              </div>
+
+              <div className="hr" />
+
+              <div className="small muted">
+                After payment success, you&apos;ll be redirected back and your tier updates once webhook confirms.
               </div>
             </div>
           </div>
 
-          <div className="mt-6 text-white/80">{msg}</div>
+          {msg ? (
+            <div className="notice" style={{ marginTop: 14 }}>
+              <div className="small">{msg}</div>
+            </div>
+          ) : null}
         </div>
       </div>
-    </div>
+    </>
   );
 }

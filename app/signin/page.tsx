@@ -40,7 +40,7 @@ export default function SignInPage() {
   return (
     <>
       <Nav />
-      <div className="container">
+      <div className="container pagePad">
         <div className="card" style={{ padding: 24 }}>
           <h1 style={{ marginTop: 0 }}>Sign in</h1>
           <p className="muted">Google / Magic link / Password login supported.</p>

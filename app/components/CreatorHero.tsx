@@ -1,31 +1,77 @@
-export default function CreatorHero() {
-  return (
-    <div className="container mobile-shell">
-      <div className="card" style={{ padding: 16 }}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 18,
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04))",
-              border: "1px solid rgba(255,255,255,.10)",
-            }}
-          />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>Preet Kohli Uncensored</div>
-            <div className="small muted">Exclusive drops • behind-the-scenes • member-only chat</div>
+"use client";
 
-            <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-              <div className="chip">120+ paid members</div>
-              <div className="chip">Online now</div>
-              <div className="chip">New drops weekly</div>
+import { useEffect, useState } from "react";
+import type { CreatorProfileDTO } from "@/lib/profile";
+
+export default function CreatorHero() {
+  const [profile, setProfile] = useState<CreatorProfileDTO>({
+    displayName: "Preet Kohli Uncensored",
+    tagline: "Exclusive drops • behind-the-scenes • member-only chat",
+    avatarUrl: null,
+    bannerUrl: null,
+  });
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/profile", { cache: "no-store" });
+        const j = await r.json();
+        if (!alive) return;
+        if (j?.profile) setProfile(j.profile);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return (
+    <div className="container mobile-shell pagePad">
+      <div className="card heroCard">
+        <div
+          className="banner"
+          style={
+            profile.bannerUrl
+              ? {
+                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.55)), url(${profile.bannerUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
+        >
+          <div className="bannerGlow" />
+        </div>
+
+        <div className="avatarWrap">
+          <div className="avatar" aria-hidden={!profile.avatarUrl}>
+            {profile.avatarUrl ? <img className="avatarImg" src={profile.avatarUrl} alt="Profile" /> : null}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="heroTitle">{profile.displayName}</div>
+            <div className="small muted" style={{ marginTop: 6 }}>
+              {profile.tagline}
+            </div>
+
+            <div className="tabRow" style={{ marginTop: 14 }}>
+              <div className="tab tabActive">Posts</div>
+              <div className="tab">About</div>
+              <div className="tab">Perks</div>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 14 }}>
+        <div className="heroMeta">
+          <div className="chip">120+ paid members</div>
+          <div className="chip">Online now</div>
+          <div className="chip">New drops weekly</div>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
           <a className="btn btnPrimary full" href="/membership">
             Unlock access
           </a>

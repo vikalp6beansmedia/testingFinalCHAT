@@ -102,6 +102,15 @@ model TierSettings {
   updatedAt DateTime @updatedAt
 }
 
+model CreatorProfile {
+  id          String   @id @default("singleton")
+  displayName String   @default("Preet Kohli Uncensored")
+  tagline     String   @default("Exclusive drops • behind-the-scenes • member-only chat")
+  avatarUrl   String?
+  bannerUrl   String?
+  updatedAt   DateTime @updatedAt
+}
+
 model Subscription {
   id                     String   @id @default(cuid())
   userId                 String?

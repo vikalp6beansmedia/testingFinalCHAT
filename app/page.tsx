@@ -69,7 +69,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="container mobile-shell" style={{ paddingBottom: 40, marginTop: 14 }}>
+      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
         <div className="small muted" style={{ textAlign: "center" }}>
           © CreatorFarm • Patreon-style feed (Phase6 MASTER + Posts)
         </div>

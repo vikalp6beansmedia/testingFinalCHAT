@@ -41,7 +41,7 @@ export default function MemberChatPage() {
 
   function isNearBottom(el: HTMLDivElement) {
     const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-    return distance < 90; // px
+    return distance < 90;
   }
 
   function scrollToBottom(behavior: ScrollBehavior) {
@@ -51,11 +51,7 @@ export default function MemberChatPage() {
   }
 
   function markSeen(latestMessages: Msg[]) {
-    // store latest ADMIN message time as "seen" so Nav red-dot can disappear
-    const latestAdmin = [...latestMessages]
-      .reverse()
-      .find((m) => m.senderRole === "ADMIN");
-
+    const latestAdmin = [...latestMessages].reverse().find((m) => m.senderRole === "ADMIN");
     const iso = latestAdmin?.createdAt ?? null;
     if (!iso || typeof window === "undefined") return;
 
@@ -75,7 +71,6 @@ export default function MemberChatPage() {
     const next: Msg[] = j.messages || [];
     const nextLastId = next?.[next.length - 1]?.id || "";
 
-    // No changes → don't re-render → no flicker
     if (silent && nextLastId && nextLastId === lastMessageIdRef.current) {
       return;
     }
@@ -86,13 +81,8 @@ export default function MemberChatPage() {
     setMessages(next);
     lastMessageIdRef.current = nextLastId;
 
-    // Mark seen on load
     markSeen(next);
 
-    // Scroll behavior:
-    // - first load: jump to bottom (no animation)
-    // - silent polling: only if user is already at bottom
-    // - after sending: handled by send()
     setTimeout(() => {
       if (!listRef.current) return;
       if (firstLoadRef.current) {
@@ -116,7 +106,6 @@ export default function MemberChatPage() {
     });
 
     await load({ silent: false });
-    // after sending, always go to bottom smoothly
     setTimeout(() => scrollToBottom("smooth"), 0);
   }
 
@@ -127,16 +116,12 @@ export default function MemberChatPage() {
   useEffect(() => {
     if (!conversationId) return;
 
-    // initial load
     load({ silent: false });
-
-    // silent polling (no visible jump)
     const id = setInterval(() => load({ silent: true }), 5000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  // On mount, if user had no "seen" value, set it to now to avoid dot on first open
   useEffect(() => {
     if (typeof window === "undefined") return;
     const existing = window.localStorage.getItem(LAST_SEEN_KEY);
@@ -147,56 +132,62 @@ export default function MemberChatPage() {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <>
       <Nav />
-      <div className="mx-auto max-w-3xl px-6 py-10">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
-          <h1 className="text-2xl font-semibold text-white">Chat Support</h1>
-          <p className="mt-2 text-white/70">Admin can reply here after you subscribe.</p>
-
-          {error ? (
-            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
-              {error}
-            </div>
-          ) : null}
-
-          <div
-            className="mt-6"
-            ref={listRef}
-            style={{
-              height: 420,
-              overflowY: "auto",
-              borderRadius: 16,
-              border: "1px solid rgba(255,255,255,.08)",
-              padding: 14,
-              scrollBehavior: "smooth",
-            }}
-          >
-            {messages.map((m) => (
-              <div key={m.id} style={{ marginBottom: 10, textAlign: m.senderRole === "USER" ? "right" : "left" }}>
-                <div
-                  style={{
-                    display: "inline-block",
-                    maxWidth: "80%",
-                    padding: "10px 12px",
-                    borderRadius: 14,
-                    background: "rgba(0,0,0,.35)",
-                    border: "1px solid rgba(255,255,255,.08)",
-                  }}
-                >
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>{m.senderRole}</div>
-                  <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
-                </div>
+      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div>
+              <h1 style={{ margin: 0 }}>Chat Support</h1>
+              <div className="small muted" style={{ marginTop: 6 }}>
+                Admin can reply here after you subscribe.
               </div>
-            ))}
+            </div>
+            <a className="btn" href="/">
+              Back to feed
+            </a>
           </div>
 
-          <div className="mt-4" style={{ display: "flex", gap: 10 }}>
+          {error ? <div className="errorBox" style={{ marginTop: 12 }}>{error}</div> : null}
+
+          <div
+            ref={listRef}
+            style={{
+              marginTop: 14,
+              height: 420,
+              overflowY: "auto",
+              borderRadius: 18,
+              border: "1px solid rgba(255,255,255,.10)",
+              background: "rgba(0,0,0,.18)",
+              padding: 14,
+            }}
+          >
+            {messages.length ? (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    marginBottom: 10,
+                    textAlign: m.senderRole === "USER" ? "right" : "left",
+                  }}
+                >
+                  <div className="chatBubble">
+                    <div className="chatMeta">{m.senderRole}</div>
+                    <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="small muted">No messages yet.</div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Type a message..."
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
+              className="input"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -209,11 +200,11 @@ export default function MemberChatPage() {
             </button>
           </div>
 
-          <div className="mt-3 text-xs text-white/50">
+          <div className="small muted" style={{ marginTop: 10 }}>
             Auto-refresh is silent. No visible flicker.
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

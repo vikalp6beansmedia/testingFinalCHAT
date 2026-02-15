@@ -13,6 +13,15 @@ export default function AdminPostsPage() {
   const [q, setQ] = useState("");
   const [posts, setPosts] = useState<PostDTO[]>([]);
 
+  const [profile, setProfile] = useState({
+    displayName: "Preet Kohli Uncensored",
+    tagline: "Exclusive drops • behind-the-scenes • member-only chat",
+    avatarUrl: "",
+    bannerUrl: "",
+  });
+
+  const [profileMsg, setProfileMsg] = useState("");
+
   const [form, setForm] = useState({
     title: "",
     excerpt: "",
@@ -35,6 +44,59 @@ export default function AdminPostsPage() {
     }
     setPosts(Array.isArray(data?.posts) ? data.posts : []);
     setLoading(false);
+  }
+
+  async function loadProfile() {
+    try {
+      const r = await fetch("/api/admin/profile", { cache: "no-store" });
+      const j = await r.json();
+      if (r.ok && j?.profile) {
+        setProfile({
+          displayName: j.profile.displayName || "Preet Kohli Uncensored",
+          tagline: j.profile.tagline || "Exclusive drops • behind-the-scenes • member-only chat",
+          avatarUrl: j.profile.avatarUrl || "",
+          bannerUrl: j.profile.bannerUrl || "",
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function saveProfile() {
+    setProfileMsg("");
+    const r = await fetch("/api/admin/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        displayName: profile.displayName,
+        tagline: profile.tagline,
+        avatarUrl: profile.avatarUrl || null,
+        bannerUrl: profile.bannerUrl || null,
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      setProfileMsg(j?.error || "Save failed");
+      return;
+    }
+    setProfileMsg("Saved ✅");
+    await loadProfile();
+  }
+
+  async function upload(kind: "avatar" | "banner", file: File) {
+    setProfileMsg("");
+    const fd = new FormData();
+    fd.append("kind", kind);
+    fd.append("file", file);
+    const r = await fetch("/api/admin/profile/upload", { method: "POST", body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      setProfileMsg(j?.error || "Upload failed");
+      return;
+    }
+    setProfileMsg("Uploaded ✅");
+    await loadProfile();
   }
 
   async function create() {
@@ -83,6 +145,7 @@ export default function AdminPostsPage() {
 
   useEffect(() => {
     load();
+    loadProfile();
   }, []);
 
   const filtered = useMemo(() => {
@@ -94,7 +157,7 @@ export default function AdminPostsPage() {
   return (
     <>
       <Nav />
-      <div className="container mobile-shell">
+      <div className="container mobile-shell pagePad">
         <div className="card" style={{ padding: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
@@ -109,6 +172,120 @@ export default function AdminPostsPage() {
           </div>
 
           <div className="hr" />
+
+          {/* Creator Profile */}
+          <div className="card" style={{ padding: 14, background: "rgba(255,255,255,.04)", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 900 }}>Creator Profile</div>
+                <div className="small muted" style={{ marginTop: 6 }}>
+                  Upload <b>avatar</b> + <b>banner</b> for the Home page.
+                </div>
+              </div>
+              <button className="btn" onClick={saveProfile}>
+                Save profile
+              </button>
+            </div>
+
+            <div className="hr" style={{ margin: "14px 0" }} />
+
+            <div className="grid2">
+              <div style={{ display: "grid", gap: 10 }}>
+                <input
+                  className="input"
+                  placeholder="Display name"
+                  value={profile.displayName}
+                  onChange={(e) => setProfile((s) => ({ ...s, displayName: e.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Tagline"
+                  value={profile.tagline}
+                  onChange={(e) => setProfile((s) => ({ ...s, tagline: e.target.value }))}
+                />
+
+                <div className="row2">
+                  <input
+                    className="input"
+                    placeholder="Avatar URL (optional)"
+                    value={profile.avatarUrl}
+                    onChange={(e) => setProfile((s) => ({ ...s, avatarUrl: e.target.value }))}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Banner URL (optional)"
+                    value={profile.bannerUrl}
+                    onChange={(e) => setProfile((s) => ({ ...s, bannerUrl: e.target.value }))}
+                  />
+                </div>
+
+                {profileMsg ? <div className="small muted">{profileMsg}</div> : null}
+              </div>
+
+              <div style={{ display: "grid", gap: 12 }}>
+                <div className="rowCard" style={{ alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div className="avatar" style={{ width: 58, height: 58, borderRadius: 18 }}>
+                      {profile.avatarUrl ? <img className="avatarImg" src={profile.avatarUrl} alt="Avatar" /> : null}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 900 }}>Avatar</div>
+                      <div className="small muted">Square / face crop</div>
+                    </div>
+                  </div>
+                  <label className="btn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) upload("avatar", f);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div className="rowCard" style={{ alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 120,
+                        height: 58,
+                        borderRadius: 16,
+                        border: "1px solid rgba(255,255,255,.12)",
+                        background: "rgba(0,0,0,.22)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {profile.bannerUrl ? (
+                        <img src={profile.bannerUrl} alt="Banner" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      ) : null}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 900 }}>Banner</div>
+                      <div className="small muted">Wide / landscape</div>
+                    </div>
+                  </div>
+                  <label className="btn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) upload("banner", f);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="grid2">
             <div className="card" style={{ padding: 14, background: "rgba(255,255,255,.04)" }}>

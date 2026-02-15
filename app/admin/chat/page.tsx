@@ -6,6 +6,11 @@ import Nav from "@/components/Nav";
 type Convo = { id: string; email: string | null; name: string | null; updatedAt: string };
 type Msg = { id: string; senderRole: string; text: string; createdAt: string };
 
+function nice(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
 export default function AdminChatPage() {
   const [convos, setConvos] = useState<Convo[]>([]);
   const [active, setActive] = useState<string>("");
@@ -16,7 +21,7 @@ export default function AdminChatPage() {
 
   async function loadConvos() {
     setError("");
-    const r = await fetch("/api/chat/admin/conversations");
+    const r = await fetch("/api/chat/admin/conversations", { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       setError(j?.error || "Forbidden");
@@ -28,7 +33,7 @@ export default function AdminChatPage() {
 
   async function loadMessages(conversationId: string) {
     if (!conversationId) return;
-    const r = await fetch(`/api/chat/messages?conversationId=${conversationId}`);
+    const r = await fetch(`/api/chat/messages?conversationId=${conversationId}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     if (r.ok) setMessages(j.messages || []);
   }
@@ -57,83 +62,128 @@ export default function AdminChatPage() {
   }, [active]);
 
   return (
-    <div className="min-h-screen">
+    <>
       <Nav />
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
-          <h1 className="text-2xl font-semibold text-white">Admin Chat Inbox</h1>
-          <p className="mt-2 text-white/70">Reply to paid users here.</p>
-
-          {error ? (
-            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
-              {error}
-            </div>
-          ) : null}
-
-          <div className="mt-6" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 14 }}>
-            <div style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 16, overflow: "hidden" }}>
-              <div style={{ padding: 12, borderBottom: "1px solid rgba(255,255,255,.08)", fontWeight: 700, color: "white" }}>
-                Conversations
-              </div>
-              <div style={{ maxHeight: 520, overflowY: "auto" }}>
-                {convos.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setActive(c.id)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: 12,
-                      border: "none",
-                      borderBottom: "1px solid rgba(255,255,255,.06)",
-                      background: c.id === active ? "rgba(0,0,0,.35)" : "transparent",
-                      color: "white",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700 }}>{c.name || "User"}</div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>{c.email || ""}</div>
-                  </button>
-                ))}
-                {convos.length === 0 ? (
-                  <div style={{ padding: 12, opacity: 0.7, color: "white" }}>No conversations yet.</div>
-                ) : null}
+      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div>
+              <h1 style={{ margin: 0 }}>Admin Chat</h1>
+              <div className="small muted" style={{ marginTop: 6 }}>
+                Reply to members. Conversations update automatically when you send.
               </div>
             </div>
+            <button className="btn" onClick={loadConvos}>
+              Refresh
+            </button>
+          </div>
 
-            <div style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 16, padding: 14 }}>
-              <div style={{ height: 460, overflowY: "auto" }}>
-                {messages.map((m) => (
-                  <div key={m.id} style={{ marginBottom: 10, textAlign: m.senderRole === "ADMIN" ? "right" : "left" }}>
-                    <div style={{ display: "inline-block", maxWidth: "80%", padding: "10px 12px", borderRadius: 14, background: "rgba(0,0,0,.35)", border: "1px solid rgba(255,255,255,.08)" }}>
-                      <div style={{ fontSize: 12, opacity: 0.7 }}>{m.senderRole}</div>
-                      <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+          {error ? <div className="errorBox" style={{ marginTop: 12 }}>{error}</div> : null}
+
+          <div className="hr" />
+
+          <div className="grid2">
+            <div className="card" style={{ padding: 14, background: "rgba(255,255,255,.04)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                <div style={{ fontWeight: 900 }}>Conversations</div>
+                <span className="pill">{convos.length}</span>
+              </div>
+
+              <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+                {convos.length ? (
+                  convos.map((c) => (
+                    <button
+                      key={c.id}
+                      className={"rowCard"}
+                      style={{
+                        cursor: "pointer",
+                        textAlign: "left",
+                        background: active === c.id ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.18)",
+                      }}
+                      onClick={() => setActive(c.id)}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {c.name || c.email || c.id.slice(0, 8)}
+                        </div>
+                        <div className="small muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {c.email || "—"}
+                        </div>
+                      </div>
+                      <div className="small muted" style={{ whiteSpace: "nowrap" }}>
+                        {nice(c.updatedAt)}
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="small muted">No conversations yet.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: 14, background: "rgba(255,255,255,.04)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                <div style={{ fontWeight: 900 }}>Messages</div>
+                <span className="pill">{active ? "Active" : "Pick one"}</span>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 12,
+                  height: 420,
+                  overflowY: "auto",
+                  borderRadius: 18,
+                  border: "1px solid rgba(255,255,255,.10)",
+                  background: "rgba(0,0,0,.18)",
+                  padding: 14,
+                }}
+              >
+                {messages.length ? (
+                  messages.map((m) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        marginBottom: 10,
+                        textAlign: m.senderRole === "ADMIN" ? "right" : "left",
+                      }}
+                    >
+                      <div className="chatBubble">
+                        <div className="chatMeta">{m.senderRole}</div>
+                        <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="small muted">No messages yet.</div>
+                )}
               </div>
 
-              <div className="mt-4" style={{ display: "flex", gap: 10 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
                 <input
+                  className="input"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Reply..."
-                  className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
+                  placeholder={active ? "Type a reply..." : "Select a conversation first"}
+                  disabled={!active || loading}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      send();
+                    }
+                  }}
                 />
-                <button
-                  onClick={send}
-                  disabled={loading}
-                  className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-60"
-                >
-                  Send
+                <button className="btn btnPrimary" onClick={send} disabled={!active || loading}>
+                  {loading ? "Sending..." : "Send"}
                 </button>
               </div>
 
-              <div className="mt-3 text-xs text-white/50">This uses polling (simple). Refresh page if needed.</div>
+              <div className="small muted" style={{ marginTop: 10 }}>
+                Tip: member chat shows a red dot until they open the chat.
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

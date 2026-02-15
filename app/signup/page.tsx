@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Nav from "@/components/Nav";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function SignupPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Signup failed");
 
-      setMsg("Signup successful! Redirecting to sign in...");
+      setMsg("Signup successful! Redirecting to sign in…");
       router.push("/signin");
     } catch (err: any) {
       setMsg(err.message);
@@ -37,52 +38,30 @@ export default function SignupPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 480 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 800 }}>Create account</h1>
+    <>
+      <Nav />
+      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
+        <div className="card" style={{ padding: 18, maxWidth: 560, margin: "0 auto" }}>
+          <h1 style={{ marginTop: 0 }}>Create account</h1>
+          <div className="small muted">Password login (admin can also use credentials). Google / Magic link is in Sign in.</div>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
-        <input
-          placeholder="Name (optional)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ padding: 12, borderRadius: 10, border: "1px solid #444" }}
-        />
+          <form onSubmit={onSubmit} style={{ display: "grid", gap: 10, marginTop: 14 }}>
+            <input className="input" placeholder="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input className="input" placeholder="Password (min 6 chars)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
 
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ padding: 12, borderRadius: 10, border: "1px solid #444" }}
-        />
+            <button disabled={loading} type="submit" className="btn btnPrimary full">
+              {loading ? "Creating..." : "Sign up"}
+            </button>
+          </form>
 
-        <input
-          placeholder="Password (min 6 chars)"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ padding: 12, borderRadius: 10, border: "1px solid #444" }}
-        />
+          {msg ? <div className="notice" style={{ marginTop: 12 }}><div className="small">{msg}</div></div> : null}
 
-        <button
-          disabled={loading}
-          type="submit"
-          style={{
-            padding: 12,
-            borderRadius: 10,
-            border: "none",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          {loading ? "Creating..." : "Sign up"}
-        </button>
-      </form>
-
-      {msg && <p style={{ marginTop: 12 }}>{msg}</p>}
-
-      <p style={{ marginTop: 16 }}>
-        Already have an account? <a href="/signin">Sign in</a>
-      </p>
-    </main>
+          <div className="small muted" style={{ marginTop: 14 }}>
+            Already have an account? <a href="/signin"><b>Sign in</b></a>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

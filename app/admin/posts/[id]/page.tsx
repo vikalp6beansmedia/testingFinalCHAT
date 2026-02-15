@@ -87,7 +87,7 @@ export default function AdminEditPostPage() {
   return (
     <>
       <Nav />
-      <div className="container mobile-shell">
+      <div className="container mobile-shell pagePad">
         <div className="card" style={{ padding: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
