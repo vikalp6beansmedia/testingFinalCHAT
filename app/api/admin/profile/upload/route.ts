@@ -8,7 +8,7 @@ import prisma from "@/lib/prisma";
 import path from "path";
 import fs from "fs/promises";
 
-export const runtime = "nodejs";
+
 
 function safeExt(mime: string, filename: string) {
   const byMime: Record<string, string> = {
