@@ -5,61 +5,72 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getAuthedSession, isAdminRole } from "@/lib/access";
 import prisma from "@/lib/prisma";
-import path from "path";
-import fs from "fs/promises";
 
+async function uploadToCloudinary(file: File, folder: string) {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
+  const apiKey = process.env.CLOUDINARY_API_KEY!;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET!;
 
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Missing Cloudinary env vars");
+  }
 
-function safeExt(mime: string, filename: string) {
-  const byMime: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-  };
-  const ext = byMime[mime] || (filename.split(".").pop() || "").toLowerCase();
-  if (["jpg", "jpeg", "png", "webp"].includes(ext)) return ext === "jpeg" ? "jpg" : ext;
-  return "png";
+  // Signed upload (secure)
+  const timestamp = Math.floor(Date.now() / 1000);
+  const crypto = await import("crypto");
+  const signature = crypto
+    .createHash("sha1")
+    .update(`folder=${folder}&timestamp=${timestamp}${apiSecret}`)
+    .digest("hex");
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("api_key", apiKey);
+  form.append("timestamp", String(timestamp));
+  form.append("folder", folder);
+  form.append("signature", signature);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Cloudinary upload failed: ${txt}`);
+  }
+
+  const json: any = await res.json();
+  return json.secure_url as string;
 }
 
 export async function POST(req: Request) {
-  const { role } = await getAuthedSession();
-  if (!isAdminRole(role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const session = await getAuthedSession();
+  if (!session?.user || !isAdminRole(session.user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  const form = await req.formData();
-  const kind = String(form.get("kind") || "").toLowerCase();
-  const file = form.get("file") as File | null;
-  if (!file) return NextResponse.json({ error: "Missing file" }, { status: 400 });
-  if (kind !== "avatar" && kind !== "banner") return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
-  if (!file.type.startsWith("image/")) return NextResponse.json({ error: "Only images allowed" }, { status: 400 });
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
+  const kind = (formData.get("kind") as string | null) ?? "avatar"; // "avatar" | "banner"
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  // 5MB safety cap
-  if (bytes.length > 5 * 1024 * 1024) return NextResponse.json({ error: "Max 5MB" }, { status: 400 });
+  if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
-  const ext = safeExt(file.type, file.name || "upload.png");
-  const dir = path.join(process.cwd(), "public", "uploads");
-  await fs.mkdir(dir, { recursive: true });
+  const url = await uploadToCloudinary(
+    file,
+    kind === "banner" ? "creatorfarm/banner" : "creatorfarm/avatar"
+  );
 
-  const stamp = Date.now();
-  const rand = Math.random().toString(16).slice(2, 8);
-  const filename = `${kind}-${stamp}-${rand}.${ext}`;
-  const filepath = path.join(dir, filename);
-  await fs.writeFile(filepath, bytes);
+  // Ensure profile exists
+  const existing = await prisma.creatorProfile.findFirst();
+  const profile = existing
+    ? await prisma.creatorProfile.update({
+        where: { id: existing.id },
+        data: kind === "banner" ? { bannerUrl: url } : { avatarUrl: url },
+      })
+    : await prisma.creatorProfile.create({
+        data: kind === "banner" ? { bannerUrl: url } : { avatarUrl: url },
+      });
 
-  const url = `/uploads/${filename}`;
-  const updated = await prisma.creatorProfile.upsert({
-    where: { id: "singleton" },
-    update: kind === "avatar" ? { avatarUrl: url } : { bannerUrl: url },
-    create: {
-      id: "singleton",
-      displayName: "Preet Kohli Uncensored",
-      tagline: "Exclusive drops • behind-the-scenes • member-only chat",
-      avatarUrl: kind === "avatar" ? url : null,
-      bannerUrl: kind === "banner" ? url : null,
-    },
-    select: { displayName: true, tagline: true, avatarUrl: true, bannerUrl: true },
-  });
-
-  return NextResponse.json({ ok: true, url, profile: updated });
+  return NextResponse.json({ ok: true, url, profile });
 }

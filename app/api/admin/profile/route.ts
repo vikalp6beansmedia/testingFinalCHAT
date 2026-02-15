@@ -5,43 +5,54 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthedSession, isAdminRole } from "@/lib/access";
-import { getCreatorProfile } from "@/lib/profile";
 
 export async function GET() {
-  const { role } = await getAuthedSession();
-  if (!isAdminRole(role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const profile = await getCreatorProfile();
-  return NextResponse.json({ profile });
+  try {
+    const profile = await prisma.creatorProfile.findFirst();
+    return NextResponse.json(profile ?? {});
+  } catch (err) {
+    console.error("Profile GET error:", err);
+    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-  const { role } = await getAuthedSession();
-  if (!isAdminRole(role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    const session = await getAuthedSession();
 
-  const body = (await req.json().catch(() => ({}))) as any;
-  const displayName = typeof body?.displayName === "string" ? body.displayName.slice(0, 80) : undefined;
-  const tagline = typeof body?.tagline === "string" ? body.tagline.slice(0, 160) : undefined;
-  const avatarUrl = typeof body?.avatarUrl === "string" ? body.avatarUrl.slice(0, 500) : undefined;
-  const bannerUrl = typeof body?.bannerUrl === "string" ? body.bannerUrl.slice(0, 500) : undefined;
+    if (!session?.user || !isAdminRole(session.user)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  const updated = await prisma.creatorProfile.upsert({
-    where: { id: "singleton" },
-    update: {
-      ...(displayName !== undefined ? { displayName } : {}),
-      ...(tagline !== undefined ? { tagline } : {}),
-      ...(avatarUrl !== undefined ? { avatarUrl } : {}),
-      ...(bannerUrl !== undefined ? { bannerUrl } : {}),
-    },
-    create: {
-      id: "singleton",
-      displayName: displayName ?? "Preet Kohli Uncensored",
-      tagline: tagline ?? "Exclusive drops • behind-the-scenes • member-only chat",
-      avatarUrl: avatarUrl ?? null,
-      bannerUrl: bannerUrl ?? null,
-    },
-    select: { displayName: true, tagline: true, avatarUrl: true, bannerUrl: true },
-  });
+    const body = await req.json();
+    const displayName = body.displayName ?? "";
+    const tagline = body.tagline ?? "";
 
-  return NextResponse.json({ profile: updated });
+    // Check if profile exists
+    const existing = await prisma.creatorProfile.findFirst();
+
+    let profile;
+
+    if (existing) {
+      profile = await prisma.creatorProfile.update({
+        where: { id: existing.id },
+        data: {
+          displayName,
+          tagline,
+        },
+      });
+    } else {
+      profile = await prisma.creatorProfile.create({
+        data: {
+          displayName,
+          tagline,
+        },
+      });
+    }
+
+    return NextResponse.json({ ok: true, profile });
+  } catch (err) {
+    console.error("Profile POST error:", err);
+    return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
+  }
 }
