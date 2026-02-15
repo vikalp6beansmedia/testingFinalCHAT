@@ -2,6 +2,15 @@
 
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+
+const LAST_SEEN_KEY = "cf_chat_last_seen_admin_at";
+
+function parseIso(s: string | null | undefined) {
+  if (!s) return null;
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t : null;
+}
 
 export default function Nav() {
   const { data } = useSession();
@@ -11,6 +20,39 @@ export default function Nav() {
 
   const hasChat = tier === "BASIC" || tier === "PRO";
   const isAdmin = role === "ADMIN";
+
+  const [hasUnread, setHasUnread] = useState(false);
+
+  async function refreshUnread() {
+    if (!data || !hasChat) {
+      setHasUnread(false);
+      return;
+    }
+
+    try {
+      const r = await fetch("/api/chat/unread", { cache: "no-store" });
+      const j = await r.json().catch(() => ({}));
+      const latest = parseIso(j?.latestAdminAt ?? null);
+      if (!latest) {
+        setHasUnread(false);
+        return;
+      }
+
+      const seenIso = typeof window !== "undefined" ? window.localStorage.getItem(LAST_SEEN_KEY) : null;
+      const seen = parseIso(seenIso) ?? 0;
+      setHasUnread(latest > seen);
+    } catch {
+      // silent
+    }
+  }
+
+  useEffect(() => {
+    refreshUnread();
+    // light polling for badge only; no UI flicker
+    const id = setInterval(refreshUnread, 10000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, hasChat]);
 
   return (
     <div className="container">
@@ -45,7 +87,13 @@ export default function Nav() {
           <Link className="pill" href="/">Home</Link>
           <Link className="pill" href="/membership">Membership</Link>
 
-          {hasChat ? <Link className="pill" href="/membership/chat">Chat</Link> : null}
+          {hasChat ? (
+            <Link className="pill" href="/membership/chat" aria-label="Chat">
+              Chat
+              {hasUnread ? <span className="unreadDot" /> : null}
+            </Link>
+          ) : null}
+
           {isAdmin ? <Link className="pill" href="/admin/chat">Admin Chat</Link> : null}
           {isAdmin ? <Link className="pill" href="/admin/posts">Posts Admin</Link> : null}
 
