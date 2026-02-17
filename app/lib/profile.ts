@@ -8,20 +8,29 @@ export type CreatorProfileDTO = {
 };
 
 export async function getCreatorProfile(): Promise<CreatorProfileDTO> {
-  const p = await prisma.creatorProfile.upsert({
+  // Try read first
+  const existing = await prisma.creatorProfile.findUnique({
     where: { id: "singleton" },
-    update: {},
-    create: {
-      id: "singleton",
-      displayName: "Preet Kohli Uncensored",
-      tagline: "Exclusive drops • behind-the-scenes • member-only chat",
-    },
     select: { displayName: true, tagline: true, avatarUrl: true, bannerUrl: true },
   });
 
+  // If not found, create a neutral empty profile (NO "Preet" in code)
+  const p =
+    existing ??
+    (await prisma.creatorProfile.create({
+      data: {
+        id: "singleton",
+        displayName: "",
+        tagline: "",
+        avatarUrl: null,
+        bannerUrl: null,
+      },
+      select: { displayName: true, tagline: true, avatarUrl: true, bannerUrl: true },
+    }));
+
   return {
-    displayName: p.displayName,
-    tagline: p.tagline,
+    displayName: p.displayName ?? "",
+    tagline: p.tagline ?? "",
     avatarUrl: p.avatarUrl ?? null,
     bannerUrl: p.bannerUrl ?? null,
   };
