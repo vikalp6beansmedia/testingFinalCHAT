@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { cache } from "react";
 
 export type CreatorProfileDTO = {
   displayName: string;
@@ -7,26 +8,25 @@ export type CreatorProfileDTO = {
   bannerUrl: string | null;
 };
 
-export async function getCreatorProfile(): Promise<CreatorProfileDTO> {
-  // Try read first
-  const existing = await prisma.creatorProfile.findUnique({
+export const getCreatorProfile = cache(async (): Promise<CreatorProfileDTO> => {
+  const p = await prisma.creatorProfile.findUnique({
     where: { id: "singleton" },
-    select: { displayName: true, tagline: true, avatarUrl: true, bannerUrl: true },
+    select: {
+      displayName: true,
+      tagline: true,
+      avatarUrl: true,
+      bannerUrl: true,
+    },
   });
 
-  // If not found, create a neutral empty profile (NO "Preet" in code)
-  const p =
-    existing ??
-    (await prisma.creatorProfile.create({
-      data: {
-        id: "singleton",
-        displayName: "",
-        tagline: "",
-        avatarUrl: null,
-        bannerUrl: null,
-      },
-      select: { displayName: true, tagline: true, avatarUrl: true, bannerUrl: true },
-    }));
+  if (!p) {
+    return {
+      displayName: "",
+      tagline: "",
+      avatarUrl: null,
+      bannerUrl: null,
+    };
+  }
 
   return {
     displayName: p.displayName ?? "",
@@ -34,4 +34,4 @@ export async function getCreatorProfile(): Promise<CreatorProfileDTO> {
     avatarUrl: p.avatarUrl ?? null,
     bannerUrl: p.bannerUrl ?? null,
   };
-}
+});
