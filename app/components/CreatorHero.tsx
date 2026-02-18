@@ -1,40 +1,12 @@
-"use client";
+import { getCreatorProfile } from "@/lib/profile";
 
-import { useEffect, useState } from "react";
-import type { CreatorProfileDTO } from "@/lib/profile";
+export default async function CreatorHero() {
+  const profile = await getCreatorProfile();
 
-export default function CreatorHero() {
-  const [profile, setProfile] = useState<CreatorProfileDTO | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        setLoading(true);
-        const r = await fetch("/api/profile", { cache: "no-store" });
-        const j = await r.json();
-        if (!alive) return;
-
-        if (j?.profile) setProfile(j.profile);
-      } catch {
-        // ignore
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // ✅ No "Preet..." is rendered at all now
-  const displayName = profile?.displayName ?? "";
-  const tagline = profile?.tagline ?? "";
-  const avatarUrl = profile?.avatarUrl ?? null;
-  const bannerUrl = profile?.bannerUrl ?? null;
+  const displayName = profile.displayName || "";
+  const tagline = profile.tagline || "";
+  const avatarUrl = profile.avatarUrl;
+  const bannerUrl = profile.bannerUrl;
 
   return (
     <div className="container mobile-shell pagePad">
@@ -60,21 +32,10 @@ export default function CreatorHero() {
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            {loading ? (
-              <>
-                <div className="heroTitle" style={{ opacity: 0.6 }}>Loading…</div>
-                <div className="small muted" style={{ marginTop: 6, opacity: 0.6 }}>
-                  Loading…
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="heroTitle">{displayName}</div>
-                <div className="small muted" style={{ marginTop: 6 }}>
-                  {tagline}
-                </div>
-              </>
-            )}
+            <div className="heroTitle">{displayName}</div>
+            <div className="small muted" style={{ marginTop: 6 }}>
+              {tagline}
+            </div>
 
             <div className="tabRow" style={{ marginTop: 14 }}>
               <div className="tab tabActive">Posts</div>
