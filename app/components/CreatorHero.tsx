@@ -4,29 +4,37 @@ import { useEffect, useState } from "react";
 import type { CreatorProfileDTO } from "@/lib/profile";
 
 export default function CreatorHero() {
-  const [profile, setProfile] = useState<CreatorProfileDTO>({
-    displayName: "Preet Kohli Uncensored",
-    tagline: "Exclusive drops • behind-the-scenes • member-only chat",
-    avatarUrl: null,
-    bannerUrl: null,
-  });
+  const [profile, setProfile] = useState<CreatorProfileDTO | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
+
     (async () => {
       try {
+        setLoading(true);
         const r = await fetch("/api/profile", { cache: "no-store" });
         const j = await r.json();
         if (!alive) return;
+
         if (j?.profile) setProfile(j.profile);
       } catch {
         // ignore
+      } finally {
+        if (alive) setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
   }, []);
+
+  // ✅ No "Preet..." is rendered at all now
+  const displayName = profile?.displayName ?? "";
+  const tagline = profile?.tagline ?? "";
+  const avatarUrl = profile?.avatarUrl ?? null;
+  const bannerUrl = profile?.bannerUrl ?? null;
 
   return (
     <div className="container mobile-shell pagePad">
@@ -34,9 +42,9 @@ export default function CreatorHero() {
         <div
           className="banner"
           style={
-            profile.bannerUrl
+            bannerUrl
               ? {
-                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.55)), url(${profile.bannerUrl})`,
+                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.55)), url(${bannerUrl})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }
@@ -47,15 +55,26 @@ export default function CreatorHero() {
         </div>
 
         <div className="avatarWrap">
-          <div className="avatar" aria-hidden={!profile.avatarUrl}>
-            {profile.avatarUrl ? <img className="avatarImg" src={profile.avatarUrl} alt="Profile" /> : null}
+          <div className="avatar" aria-hidden={!avatarUrl}>
+            {avatarUrl ? <img className="avatarImg" src={avatarUrl} alt="Profile" /> : null}
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="heroTitle">{profile.displayName}</div>
-            <div className="small muted" style={{ marginTop: 6 }}>
-              {profile.tagline}
-            </div>
+            {loading ? (
+              <>
+                <div className="heroTitle" style={{ opacity: 0.6 }}>Loading…</div>
+                <div className="small muted" style={{ marginTop: 6, opacity: 0.6 }}>
+                  Loading…
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="heroTitle">{displayName}</div>
+                <div className="small muted" style={{ marginTop: 6 }}>
+                  {tagline}
+                </div>
+              </>
+            )}
 
             <div className="tabRow" style={{ marginTop: 14 }}>
               <div className="tab tabActive">Posts</div>
