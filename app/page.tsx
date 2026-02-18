@@ -1,3 +1,7 @@
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
