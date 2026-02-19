@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Nav from "@/components/Nav";
+import { useTheme, THEMES } from "@/components/ThemeProvider";
 
 type Settings = {
   basicPrice: number;
@@ -12,6 +13,7 @@ type Settings = {
 };
 
 export default function AdminSettingsPage() {
+  const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -106,6 +108,29 @@ export default function AdminSettingsPage() {
           )}
         </div>
       </div>
+    {/* ── Theme ── */}
+        <div className="card" style={{ padding: 20, marginTop: 16 }}>
+          <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Colour Theme</div>
+          <div className="small muted" style={{ marginBottom: 16 }}>Choose your site accent colour. Saved in your browser.</div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {THEMES.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTheme(t.id)}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                  padding: "12px 16px", borderRadius: 14, cursor: "pointer",
+                  border: theme === t.id ? `2px solid ${t.color}` : "2px solid rgba(255,255,255,.10)",
+                  background: theme === t.id ? `${t.color}18` : "rgba(255,255,255,.04)",
+                  transition: "all .15s",
+                }}
+              >
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: t.color, boxShadow: theme === t.id ? `0 0 12px ${t.color}88` : "none" }} />
+                <span className="small" style={{ fontWeight: theme === t.id ? 700 : 500, color: theme === t.id ? t.color : "rgba(255,255,255,.7)" }}>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
     </>
   );
 }
