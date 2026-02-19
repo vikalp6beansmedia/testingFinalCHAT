@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
 import Link from "next/link";
@@ -15,8 +16,7 @@ export default function SignupPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMsg(null);
-    setLoading(true);
+    setMsg(null); setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
@@ -25,13 +25,28 @@ export default function SignupPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Signup failed");
-      setMsg({ text: "Account created! Redirecting to sign in…", ok: true });
-      setTimeout(() => router.push("/signin"), 1200);
+
+      // Auto sign in after signup
+      setMsg({ text: "Account created! Signing you in…", ok: true });
+      const signInRes = await signIn("credentials", { email, password, redirect: false });
+      if (signInRes?.ok) {
+        // Smart redirect based on role
+        const sessionRes = await fetch("/api/auth/session");
+        const s = await sessionRes.json();
+        const role = s?.role ?? "USER";
+        if (role === "ADMIN" || role === "CREATOR") {
+          router.replace("/admin/posts");
+        } else {
+          const profileRes = await fetch("/api/profile");
+          const pd = await profileRes.json();
+          router.replace(`/${pd?.profile?.username || "creator"}`);
+        }
+      } else {
+        router.replace("/signin");
+      }
     } catch (err: any) {
       setMsg({ text: err.message, ok: false });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
   return (
@@ -41,25 +56,21 @@ export default function SignupPage() {
         <div className="card" style={{ padding: 28 }}>
           <h1 style={{ marginTop: 0, fontSize: 24 }}>Create account</h1>
           <p className="small muted" style={{ marginTop: -8, marginBottom: 20 }}>
-            Free to join. Subscribe for exclusive content.
+            Free to join. Subscribe to unlock exclusive content.
           </p>
-
           <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
             <input className="input" placeholder="Your name (optional)" value={name} onChange={e => setName(e.target.value)} autoComplete="name" />
             <input className="input" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
             <input className="input" type="password" placeholder="Password (min 6 characters)" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" />
-
             <button className="btn btnPrimary full" type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create account"}
+              {loading ? "Creating account…" : "Create account"}
             </button>
           </form>
-
           {msg && (
             <div className={msg.ok ? "successBox" : "errorBox"} style={{ marginTop: 14 }}>
               <div className="small">{msg.text}</div>
             </div>
           )}
-
           <div className="hr" />
           <div className="small muted" style={{ textAlign: "center" }}>
             Already have an account? <Link href="/signin"><b>Sign in</b></Link>

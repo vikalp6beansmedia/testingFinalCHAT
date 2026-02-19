@@ -15,6 +15,7 @@ enum Tier {
 
 enum Role {
   ADMIN
+  CREATOR
   USER
 }
 
@@ -39,6 +40,8 @@ model User {
   password      String?
   role          Role      @default(USER)
   tier          Tier      @default(NONE)
+  lastLoginAt   DateTime?
+  isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

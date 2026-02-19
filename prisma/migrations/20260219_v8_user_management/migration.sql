@@ -1,0 +1,6 @@
+-- Add CREATOR role to Role enum
+ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'CREATOR';
+
+-- Add lastLoginAt and isActive to User
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true;

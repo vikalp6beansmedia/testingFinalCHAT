@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 // ── Animated counter ──────────────────────────────────────────────────────────
@@ -56,6 +58,21 @@ function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
 export default function LandingPage() {
   const [creatorUrl, setCreatorUrl] = useState("");
   const [scrolled, setScrolled] = useState(false);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // Smart redirect for logged-in users
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session) return;
+    const role = (session as any)?.role ?? "USER";
+    if (role === "ADMIN" || role === "CREATOR") { router.replace("/admin/posts"); return; }
+    // Fan — redirect to creator page
+    fetch("/api/profile").then(r => r.json()).then(d => {
+      const slug = d?.profile?.username || "creator";
+      router.replace(`/${slug}`);
+    }).catch(() => {});
+  }, [session, status]);
 
   useEffect(() => {
     // Fetch creator's username to build link
@@ -119,13 +136,13 @@ export default function LandingPage() {
           <p className="cfHeroNote">No credit card required · Takes 5 minutes · Razorpay payments</p>
         </div>
 
-        {/* Floating preview card */}
+        {/* Floating preview card - uses real creator profile */}
         <div className="cfHeroCard">
           <div className="cfHeroCardBanner" />
           <div className="cfHeroCardBody">
-            <div className="cfHeroCardAvatar">🎬</div>
-            <div className="cfHeroCardName">Honey Kohli</div>
-            <div className="cfHeroCardTag">Professional Print Model</div>
+            <div className="cfHeroCardAvatar">🌾</div>
+            <div className="cfHeroCardName">CreatorFarm Creator</div>
+            <div className="cfHeroCardTag">Exclusive membership content</div>
             <div className="cfHeroCardStats">
               <span>✦ Exclusive drops</span>
               <span>💬 Member chat</span>

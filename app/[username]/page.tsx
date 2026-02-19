@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useParams, notFound } from "next/navigation";
+import { useParams } from "next/navigation";
 import Nav from "@/components/Nav";
 import CreatorHero from "@/components/CreatorHero";
 import FeedToolbar from "@/components/FeedToolbar";
 import PostCard from "@/components/PostCard";
 import { FeedSkeleton } from "@/components/Skeleton";
 import type { PostDTO } from "@/lib/postTypes";
+import Link from "next/link";
 
 export default function CreatorPage() {
   const params = useParams();
@@ -17,25 +18,23 @@ export default function CreatorPage() {
   const sessionReady = status !== "loading";
   const tier = sessionReady ? String((session as any)?.tier ?? "NONE").toUpperCase() : "LOADING";
 
-  const [valid, setValid] = useState<boolean | null>(null); // null = loading
+  const [pageState, setPageState] = useState<"loading" | "valid" | "notfound">("loading");
   const [posts, setPosts] = useState<PostDTO[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [q, setQ] = useState("");
 
-  // Verify username matches the creator's slug
   useEffect(() => {
     fetch("/api/profile")
       .then(r => r.json())
       .then(d => {
-        const profileUsername = (d?.profile?.username || "creator").toLowerCase();
-        setValid(username === profileUsername);
+        const slug = (d?.profile?.username || "creator").toLowerCase();
+        setPageState(username === slug ? "valid" : "notfound");
       })
-      .catch(() => setValid(false));
+      .catch(() => setPageState("notfound"));
   }, [username]);
 
-  // Fetch posts once session + username validity confirmed
   useEffect(() => {
-    if (!sessionReady || valid !== true) return;
+    if (!sessionReady || pageState !== "valid") return;
     let alive = true;
     setPostsLoading(true);
     fetch("/api/posts", { cache: "no-store" })
@@ -44,7 +43,7 @@ export default function CreatorPage() {
       .catch(() => { if (alive) setPosts([]); })
       .finally(() => { if (alive) setPostsLoading(false); });
     return () => { alive = false; };
-  }, [sessionReady, valid]);
+  }, [sessionReady, pageState]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -52,10 +51,24 @@ export default function CreatorPage() {
     return posts.filter(p => (p.title + " " + p.excerpt).toLowerCase().includes(s));
   }, [posts, q]);
 
-  // 404 if username doesn't match
-  if (valid === false) return notFound();
+  // 404 state — render inline instead of calling notFound() during render
+  if (pageState === "notfound") {
+    return (
+      <>
+        <Nav />
+        <main className="container pagePad" style={{ paddingTop: 64, textAlign: "center" }}>
+          <div style={{ fontSize: 64, marginBottom: 16 }}>🌾</div>
+          <h1 style={{ fontSize: 32, fontWeight: 900, margin: "0 0 12px" }}>Creator not found</h1>
+          <p className="muted">The page <b>/{username}</b> doesn't exist on CreatorFarm.</p>
+          <div style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "center" }}>
+            <Link href="/" className="btn btnPrimary">Go home</Link>
+          </div>
+        </main>
+      </>
+    );
+  }
 
-  const showSkeleton = valid === null || !sessionReady || postsLoading;
+  const showSkeleton = pageState === "loading" || !sessionReady || postsLoading;
 
   return (
     <>
@@ -84,7 +97,7 @@ export default function CreatorPage() {
         <div className="footerLinks">
           <a href="/terms" className="footerLink">Terms</a>
           <a href="/privacy" className="footerLink">Privacy</a>
-          <a href="/" className="footerLink">CreatorFarm</a>
+          <a href="/" className="footerLink">CreatorFarm Home</a>
         </div>
       </footer>
     </>
