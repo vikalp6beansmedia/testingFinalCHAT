@@ -1,5 +1,5 @@
 import { getCreatorProfile } from "@/lib/profile";
-import Link from "next/link";
+import HeroCTA from "./HeroCTA";
 
 export default async function CreatorHero() {
   const profile = await getCreatorProfile();
@@ -38,30 +38,14 @@ export default async function CreatorHero() {
         </div>
 
         <div className="heroBody">
-          {/* Perks chips */}
           <div className="heroMeta">
             <span className="chip info">✦ Exclusive drops</span>
             <span className="chip info">💬 Member chat</span>
             <span className="chip info">🔥 New weekly</span>
           </div>
 
-          {/* ── Primary CTAs — always visible ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }}>
-            <Link href="/membership" className="btn btnPrimary full" style={{ justifyContent: "center" }}>
-              ⭐ Unlock access
-            </Link>
-            <Link href="/signup" className="btn full" style={{ justifyContent: "center" }}>
-              Join free
-            </Link>
-          </div>
-
-          {/* ── Secondary auth row ── */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12 }}>
-            <span className="small muted">Already a member?</span>
-            <Link href="/signin" className="btn btnSm" style={{ minHeight: 32, padding: "6px 14px", fontSize: 13 }}>
-              Sign in
-            </Link>
-          </div>
+          {/* Session-aware CTA — shows different UI for paid / free / logged-out */}
+          <HeroCTA />
 
           <div className="small muted" style={{ marginTop: 10, textAlign: "center" }}>
             Subscribe to <b>Basic</b> or <b>Pro</b> to unlock all posts and chat.
