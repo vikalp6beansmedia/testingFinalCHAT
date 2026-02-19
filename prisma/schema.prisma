@@ -104,7 +104,8 @@ model TierSettings {
 
 model CreatorProfile {
   id          String   @id @default("singleton")
-  displayName String   @default("Preet Kohli Uncensored")
+  username    String   @default("creator") @unique
+  displayName String   @default("Creator")
   tagline     String   @default("Exclusive drops • behind-the-scenes • member-only chat")
   avatarUrl   String?
   bannerUrl   String?

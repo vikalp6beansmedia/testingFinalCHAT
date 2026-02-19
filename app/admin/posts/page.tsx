@@ -26,6 +26,7 @@ export default function PostsAdminPage() {
   const router = useRouter();
 
   // ── Profile ──────────────────────────────────────────────
+  const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [tagline, setTagline] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -51,6 +52,7 @@ export default function PostsAdminPage() {
     const res = await fetch("/api/profile", { cache: "no-store" });
     const json = await res.json();
     const p = json?.profile;
+    setUsername(p?.username ?? "");
     setDisplayName(p?.displayName ?? "");
     setTagline(p?.tagline ?? "");
     setAvatarUrl(p?.avatarUrl ?? "");
@@ -140,6 +142,10 @@ export default function PostsAdminPage() {
           </div>
 
           <div style={{ display: "grid", gap: 10 }}>
+            <div>
+              <div className="small muted" style={{ marginBottom: 6 }}>Your page URL: <b>creatorfarm.in/<span style={{color:"var(--accent)"}}>{username || "creator"}</span></b></div>
+              <input className="input" placeholder="Your URL slug (e.g. honeykohli)" value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,""))} />
+            </div>
             <input className="input" placeholder="Display name" value={displayName} onChange={e => setDisplayName(e.target.value)} />
             <input className="input" placeholder="Tagline (shown under your name)" value={tagline} onChange={e => setTagline(e.target.value)} />
             <div className="row2">

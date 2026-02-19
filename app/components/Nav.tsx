@@ -38,6 +38,14 @@ export default function Nav() {
   const pathname = usePathname() || "/";
   const [hasUnread, setHasUnread] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [creatorHome, setCreatorHome] = useState("/");
+
+  useEffect(() => {
+    fetch("/api/profile").then(r => r.json()).then(d => {
+      const slug = d?.profile?.username || "creator";
+      setCreatorHome(`/${slug}`);
+    }).catch(() => {});
+  }, []);
 
   async function refreshUnread() {
     if (!data || !hasChat) { setHasUnread(false); return; }
@@ -67,7 +75,7 @@ export default function Nav() {
     <>
       <header className="topbar">
         <div className="topbarInner">
-          <Link href="/" className="brandRow">
+          <Link href={creatorHome} className="brandRow">
             <div className="brandLogoBox">CF</div>
             <div>
               <div className="brandTitle">CreatorFarm</div>
@@ -76,7 +84,7 @@ export default function Nav() {
           </Link>
 
           <nav className="desktopNav">
-            <Link className={"navPill" + (isActive("/", true) ? " navPillActive" : "")} href="/">Home</Link>
+            <Link className={"navPill" + (pathname === creatorHome ? " navPillActive" : "")} href={creatorHome}>Home</Link>
             <Link className={"navPill" + (isActive("/membership") ? " navPillActive" : "")} href="/membership">Membership</Link>
             {hasChat && (
               <Link className={"navPill" + (isActive("/membership/chat") ? " navPillActive" : "")} href="/membership/chat" style={{ position: "relative" }}>
@@ -112,7 +120,7 @@ export default function Nav() {
 
         {menuOpen && (
           <div className="mobileMenu" onClick={() => setMenuOpen(false)}>
-            <Link className="mobileMenuItem" href="/">Home</Link>
+            <Link className="mobileMenuItem" href={creatorHome}>Home</Link>
             <Link className="mobileMenuItem" href="/membership">Membership</Link>
             {hasChat && <Link className="mobileMenuItem" href="/membership/chat">Chat {hasUnread && "🔴"}</Link>}
             {isAdmin && <Link className="mobileMenuItem" href="/admin/chat">Support Chat</Link>}
@@ -135,7 +143,7 @@ export default function Nav() {
 
       {/* Mobile bottom nav */}
       <nav className="bottomNav">
-        <Link className={"navItem" + (isActive("/", true) ? " navItemActive" : "")} href="/">
+        <Link className={"navItem" + (pathname === creatorHome ? " navItemActive" : "")} href={creatorHome}>
           <Icon name="home" /><span>Home</span>
         </Link>
         <Link className={"navItem" + (isActive("/membership") ? " navItemActive" : "")} href="/membership">

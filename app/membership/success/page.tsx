@@ -4,6 +4,12 @@ import Link from "next/link";
 export const metadata = { title: "Payment Successful – CreatorFarm" };
 
 export default function SuccessPage() {
+  const [creatorHome, setCreatorHome] = useState("/");
+  useEffect(() => {
+    fetch("/api/profile").then(r => r.json()).then(d => {
+      setCreatorHome(`/${d?.profile?.username || "creator"}`);
+    }).catch(() => {});
+  }, []);
   return (
     <>
       <Nav />
@@ -15,7 +21,7 @@ export default function SuccessPage() {
             Your payment was successful. Your membership is now active — it may take a minute to reflect on your account.
           </p>
           <div style={{ display: "grid", gap: 10, marginTop: 24 }}>
-            <Link href="/" className="btn btnPrimary full">Browse exclusive posts</Link>
+            <Link href={creatorHome} className="btn btnPrimary full">Browse exclusive posts</Link>
             <Link href="/membership/chat" className="btn full">Open member chat</Link>
           </div>
           <div className="small muted" style={{ marginTop: 20 }}>
