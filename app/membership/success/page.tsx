@@ -1,7 +1,8 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Nav from "@/components/Nav";
 import Link from "next/link";
-
-export const metadata = { title: "Payment Successful – CreatorFarm" };
 
 export default function SuccessPage() {
   const [creatorHome, setCreatorHome] = useState("/");
