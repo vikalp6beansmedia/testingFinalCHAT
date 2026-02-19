@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
+import MediaUploader from "@/components/MediaUploader";
 import type { AccessType, PostDTO, PostType } from "@/lib/postTypes";
 
 
@@ -141,7 +142,11 @@ export default function AdminEditPostPage() {
                 />
               ) : null}
 
-              <input className="input" placeholder="Media URL" value={form.mediaUrl} onChange={(e) => setForm((s) => ({ ...s, mediaUrl: e.target.value }))} />
+              <MediaUploader
+                label="Media URL"
+                value={form.mediaUrl}
+                onChange={(url) => setForm((s) => ({ ...s, mediaUrl: url }))}
+              />
               <input className="input" placeholder="Duration (optional)" value={form.duration} onChange={(e) => setForm((s) => ({ ...s, duration: e.target.value }))} />
 
               <button className="btn btnPrimary full" onClick={save} disabled={saving}>

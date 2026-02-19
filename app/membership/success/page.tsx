@@ -1,52 +1,28 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Nav from "@/components/Nav";
+import Link from "next/link";
 
-export default function MembershipSuccessPage() {
-  const [seconds, setSeconds] = useState(3);
+export const metadata = { title: "Payment Successful – CreatorFarm" };
 
-  useEffect(() => {
-    const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      window.location.href = "/";
-    }, 2500);
-    return () => clearTimeout(t);
-  }, []);
-
+export default function SuccessPage() {
   return (
     <>
       <Nav />
-      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
-        <div className="card" style={{ padding: 18 }}>
-          <h1 style={{ marginTop: 0 }}>Subscription successful ✅</h1>
-          <div className="small muted" style={{ marginTop: 6 }}>
-            Redirecting you back to home in <b>{seconds}s</b>…
+      <main className="container pagePad" style={{ paddingTop: 40, maxWidth: 520 }}>
+        <div className="card" style={{ padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+          <h1 style={{ marginTop: 0, fontSize: 26 }}>You're in!</h1>
+          <p className="muted" style={{ lineHeight: 1.7 }}>
+            Your payment was successful. Your membership is now active — it may take a minute to reflect on your account.
+          </p>
+          <div style={{ display: "grid", gap: 10, marginTop: 24 }}>
+            <Link href="/" className="btn btnPrimary full">Browse exclusive posts</Link>
+            <Link href="/membership/chat" className="btn full">Open member chat</Link>
           </div>
-
-          <div className="notice" style={{ marginTop: 14 }}>
-            <div className="small muted">
-              If your tier doesn’t appear immediately, it will update within a few seconds (webhook confirms membership).
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-            <button onClick={() => (window.location.href = "/")} className="btn btnPrimary">
-              Go to Home now
-            </button>
-            <a href="/membership/chat" className="btn">
-              Open Chat
-            </a>
-            <a href="/membership" className="btn">
-              Membership page
-            </a>
+          <div className="small muted" style={{ marginTop: 20 }}>
+            Didn't get access? Refresh the page or <Link href="/membership/chat"><b>contact support</b></Link>.
           </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

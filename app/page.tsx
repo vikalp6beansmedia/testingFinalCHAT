@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -7,6 +6,8 @@ import Nav from "@/components/Nav";
 import CreatorHero from "@/components/CreatorHero";
 import FeedToolbar from "@/components/FeedToolbar";
 import PostCard from "@/components/PostCard";
+import { FeedSkeleton } from "@/components/Skeleton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { PostDTO } from "@/lib/postTypes";
 
 export default function Home() {
@@ -33,10 +34,7 @@ export default function Home() {
         setLoading(false);
       }
     })();
-
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
   const filtered = useMemo(() => {
@@ -46,35 +44,40 @@ export default function Home() {
   }, [posts, q]);
 
   return (
-    <>
+    <ErrorBoundary>
       <Nav />
-      <CreatorHero />
-      <FeedToolbar onSearch={setQ} />
+      <main>
+        <CreatorHero />
+        <FeedToolbar onSearch={setQ} />
 
-      {loading ? (
-        <div className="container mobile-shell" style={{ marginTop: 12 }}>
-          <div className="card" style={{ padding: 14 }}>
-            <div className="small muted">Loading posts…</div>
-          </div>
-        </div>
-      ) : filtered.length ? (
-        filtered.map((p) => <PostCard key={p.id} post={p} tier={tier} />)
-      ) : (
-        <div className="container mobile-shell" style={{ marginTop: 12, paddingBottom: 24 }}>
-          <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontWeight: 900 }}>No posts yet</div>
-            <div className="small muted" style={{ marginTop: 6 }}>
-              Admin can add posts from <b>Posts Admin</b>.
+        <div style={{ marginTop: 8 }}>
+          {loading ? (
+            <FeedSkeleton />
+          ) : filtered.length ? (
+            filtered.map((p) => <PostCard key={p.id} post={p} tier={tier} />)
+          ) : (
+            <div className="container" style={{ marginTop: 12 }}>
+              <div className="card" style={{ padding: 20, textAlign: "center" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+                <div style={{ fontWeight: 800, fontSize: 18 }}>No posts yet</div>
+                <div className="small muted" style={{ marginTop: 6 }}>
+                  The creator hasn't posted anything yet. Check back soon!
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </main>
 
-      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
-        <div className="small muted" style={{ textAlign: "center" }}>
-          © CreatorFarm • Patreon-style feed (Phase6 MASTER + Posts)
+      <footer className="siteFooter">
+        <span className="small muted">© {new Date().getFullYear()} CreatorFarm</span>
+        <div className="footerLinks">
+          <a href="/terms" className="footerLink">Terms</a>
+          <a href="/privacy" className="footerLink">Privacy</a>
+          <a href="/signin" className="footerLink">Sign in</a>
+          <a href="/signup" className="footerLink">Join</a>
         </div>
-      </div>
-    </>
+      </footer>
+    </ErrorBoundary>
   );
 }

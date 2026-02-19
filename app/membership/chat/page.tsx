@@ -1,210 +1,172 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 type Msg = { id: string; senderRole: string; text: string; createdAt: string };
-
 const LAST_SEEN_KEY = "cf_chat_last_seen_admin_at";
 
-function parseIsoMs(s: string | null | undefined) {
-  if (!s) return null;
-  const t = Date.parse(s);
-  return Number.isFinite(t) ? t : null;
-}
-
 export default function MemberChatPage() {
-  const [conversationId, setConversationId] = useState<string>("");
+  const { data: session, status } = useSession();
+  const tier = (session as any)?.tier ?? "NONE";
+  const hasChat = tier === "BASIC" || tier === "PRO";
+
+  const [conversationId, setConversationId] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [text, setText] = useState("");
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+  const lastIdRef = useRef("");
+  const firstLoad = useRef(true);
 
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const lastMessageIdRef = useRef<string>("");
-  const firstLoadRef = useRef<boolean>(true);
+  function scrollBottom(behavior: ScrollBehavior = "smooth") {
+    const el = listRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior });
+  }
 
-  const lastAdminSeenMs = useMemo(() => {
-    if (typeof window === "undefined") return 0;
-    return parseIsoMs(window.localStorage.getItem(LAST_SEEN_KEY)) ?? 0;
-  }, []);
+  function markSeen(msgs: Msg[]) {
+    const last = [...msgs].reverse().find(m => m.senderRole === "ADMIN");
+    if (last?.createdAt && typeof window !== "undefined") {
+      const cur = Date.parse(window.localStorage.getItem(LAST_SEEN_KEY) || "") || 0;
+      const nw = Date.parse(last.createdAt) || 0;
+      if (nw > cur) window.localStorage.setItem(LAST_SEEN_KEY, last.createdAt);
+    }
+  }
 
   async function init() {
-    setError("");
     const r = await fetch("/api/chat/conversation", { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      setError(j?.error || "Chat not available");
-      return;
-    }
+    if (!r.ok) { setError(j?.error || "Chat unavailable. Make sure you're subscribed."); return; }
     setConversationId(j.conversationId);
   }
 
-  function isNearBottom(el: HTMLDivElement) {
-    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-    return distance < 90;
-  }
-
-  function scrollToBottom(behavior: ScrollBehavior) {
-    const el = listRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
-  }
-
-  function markSeen(latestMessages: Msg[]) {
-    const latestAdmin = [...latestMessages].reverse().find((m) => m.senderRole === "ADMIN");
-    const iso = latestAdmin?.createdAt ?? null;
-    if (!iso || typeof window === "undefined") return;
-
-    const currentSeen = parseIsoMs(window.localStorage.getItem(LAST_SEEN_KEY)) ?? 0;
-    const newSeen = parseIsoMs(iso) ?? 0;
-    if (newSeen > currentSeen) {
-      window.localStorage.setItem(LAST_SEEN_KEY, iso);
-    }
-  }
-
-  async function load({ silent }: { silent: boolean }) {
+  async function load(silent = false) {
     if (!conversationId) return;
     const r = await fetch(`/api/chat/messages?conversationId=${conversationId}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return;
-
     const next: Msg[] = j.messages || [];
-    const nextLastId = next?.[next.length - 1]?.id || "";
-
-    if (silent && nextLastId && nextLastId === lastMessageIdRef.current) {
-      return;
-    }
-
+    const lastId = next[next.length - 1]?.id || "";
+    if (silent && lastId === lastIdRef.current) return;
     const el = listRef.current;
-    const shouldStick = el ? isNearBottom(el) : true;
-
+    const near = el ? (el.scrollHeight - el.scrollTop - el.clientHeight) < 100 : true;
     setMessages(next);
-    lastMessageIdRef.current = nextLastId;
-
+    lastIdRef.current = lastId;
     markSeen(next);
-
-    setTimeout(() => {
-      if (!listRef.current) return;
-      if (firstLoadRef.current) {
-        scrollToBottom("auto");
-        firstLoadRef.current = false;
-      } else if (shouldStick) {
-        scrollToBottom("auto");
-      }
-    }, 0);
+    setTimeout(() => { if (firstLoad.current || near) { scrollBottom(firstLoad.current ? "auto" : "smooth"); firstLoad.current = false; } }, 0);
   }
 
   async function send() {
     const t = text.trim();
-    if (!t || !conversationId) return;
+    if (!t || !conversationId || sending) return;
+    setSending(true);
     setText("");
-
     await fetch("/api/chat/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ conversationId, text: t }),
     });
-
-    await load({ silent: false });
-    setTimeout(() => scrollToBottom("smooth"), 0);
+    await load();
+    setSending(false);
   }
 
-  useEffect(() => {
-    init();
-  }, []);
-
+  useEffect(() => { if (status === "authenticated") init(); }, [status]);
   useEffect(() => {
     if (!conversationId) return;
-
-    load({ silent: false });
-    const id = setInterval(() => load({ silent: true }), 5000);
+    load();
+    const id = setInterval(() => load(true), 5000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const existing = window.localStorage.getItem(LAST_SEEN_KEY);
-    if (!existing) {
-      window.localStorage.setItem(LAST_SEEN_KEY, new Date(lastAdminSeenMs || Date.now()).toISOString());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  if (status === "loading") return <><Nav /><div className="container" style={{ paddingTop: 32 }}><div className="small muted">Loading…</div></div></>;
+
+  if (!session) return (
+    <>
+      <Nav />
+      <div className="container pagePad" style={{ paddingTop: 32, maxWidth: 480 }}>
+        <div className="card" style={{ padding: 24, textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+          <h2 style={{ marginTop: 0 }}>Sign in required</h2>
+          <p className="small muted">You need to be signed in and subscribed to use chat.</p>
+          <Link href="/signin" className="btn btnPrimary" style={{ marginTop: 8 }}>Sign in</Link>
+        </div>
+      </div>
+    </>
+  );
+
+  if (!hasChat) return (
+    <>
+      <Nav />
+      <div className="container pagePad" style={{ paddingTop: 32, maxWidth: 480 }}>
+        <div className="card" style={{ padding: 24, textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>⭐</div>
+          <h2 style={{ marginTop: 0 }}>Members only</h2>
+          <p className="small muted">Chat is available for Basic and Pro subscribers.</p>
+          <Link href="/membership" className="btn btnPrimary" style={{ marginTop: 8 }}>View plans</Link>
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <>
       <Nav />
-      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
-        <div className="card" style={{ padding: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <main className="container pagePad" style={{ paddingTop: 16, maxWidth: 720 }}>
+        <div className="card" style={{ overflow: "hidden" }}>
+          {/* Header */}
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <h1 style={{ margin: 0 }}>Chat Support</h1>
-              <div className="small muted" style={{ marginTop: 6 }}>
-                Admin can reply here after you subscribe.
-              </div>
+              <div style={{ fontWeight: 800, fontSize: 18 }}>💬 Creator Chat</div>
+              <div className="small muted">Ask anything — the creator replies here</div>
             </div>
-            <a className="btn" href="/">
-              Back to feed
-            </a>
+            <span className="chip ok">Live</span>
           </div>
 
-          {error ? <div className="errorBox" style={{ marginTop: 12 }}>{error}</div> : null}
+          {error && <div className="errorBox" style={{ margin: 16 }}><div className="small">{error}</div></div>}
 
+          {/* Messages */}
           <div
             ref={listRef}
-            style={{
-              marginTop: 14,
-              height: 420,
-              overflowY: "auto",
-              borderRadius: 18,
-              border: "1px solid rgba(255,255,255,.10)",
-              background: "rgba(0,0,0,.18)",
-              padding: 14,
-            }}
+            style={{ height: 420, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}
           >
-            {messages.length ? (
-              messages.map((m) => (
-                <div
-                  key={m.id}
-                  style={{
-                    marginBottom: 10,
-                    textAlign: m.senderRole === "USER" ? "right" : "left",
-                  }}
-                >
-                  <div className="chatBubble">
-                    <div className="chatMeta">{m.senderRole}</div>
-                    <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="small muted">No messages yet.</div>
+            {messages.length === 0 && !error && (
+              <div style={{ textAlign: "center", marginTop: "auto", paddingTop: 60 }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>👋</div>
+                <div className="small muted">No messages yet. Say hello!</div>
+              </div>
             )}
+            {messages.map((m) => {
+              const isOwn = m.senderRole === "USER";
+              return (
+                <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: isOwn ? "flex-end" : "flex-start" }}>
+                  <div className="chatMeta">{isOwn ? "You" : "Creator"} · {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                  <div className={"chatBubble" + (isOwn ? " chatBubbleOwn" : "")}>{m.text}</div>
+                </div>
+              );
+            })}
           </div>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          {/* Input */}
+          <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,.08)", display: "flex", gap: 10 }}>
             <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Type a message..."
               className="input"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
+              placeholder="Type a message…"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              disabled={sending}
+              style={{ flex: 1 }}
             />
-            <button onClick={send} className="btn btnPrimary" style={{ paddingLeft: 18, paddingRight: 18 }}>
-              Send
+            <button className="btn btnPrimary" onClick={send} disabled={sending || !text.trim()} style={{ paddingLeft: 20, paddingRight: 20 }}>
+              {sending ? "…" : "Send"}
             </button>
           </div>
-
-          <div className="small muted" style={{ marginTop: 10 }}>
-            Auto-refresh is silent. No visible flicker.
-          </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

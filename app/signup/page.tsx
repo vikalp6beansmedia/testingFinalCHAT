@@ -3,35 +3,32 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "@/components/Nav";
+import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
     setLoading(true);
-
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Signup failed");
-
-      setMsg("Signup successful! Redirecting to sign in…");
-      router.push("/signin");
+      setMsg({ text: "Account created! Redirecting to sign in…", ok: true });
+      setTimeout(() => router.push("/signin"), 1200);
     } catch (err: any) {
-      setMsg(err.message);
+      setMsg({ text: err.message, ok: false });
     } finally {
       setLoading(false);
     }
@@ -40,28 +37,38 @@ export default function SignupPage() {
   return (
     <>
       <Nav />
-      <div className="container mobile-shell pagePad" style={{ marginTop: 14 }}>
-        <div className="card" style={{ padding: 18, maxWidth: 560, margin: "0 auto" }}>
-          <h1 style={{ marginTop: 0 }}>Create account</h1>
-          <div className="small muted">Password login (admin can also use credentials). Google / Magic link is in Sign in.</div>
+      <main className="container pagePad" style={{ maxWidth: 480, paddingTop: 32 }}>
+        <div className="card" style={{ padding: 28 }}>
+          <h1 style={{ marginTop: 0, fontSize: 24 }}>Create account</h1>
+          <p className="small muted" style={{ marginTop: -8, marginBottom: 20 }}>
+            Free to join. Subscribe for exclusive content.
+          </p>
 
-          <form onSubmit={onSubmit} style={{ display: "grid", gap: 10, marginTop: 14 }}>
-            <input className="input" placeholder="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
-            <input className="input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input className="input" placeholder="Password (min 6 chars)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+            <input className="input" placeholder="Your name (optional)" value={name} onChange={e => setName(e.target.value)} autoComplete="name" />
+            <input className="input" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+            <input className="input" type="password" placeholder="Password (min 6 characters)" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" />
 
-            <button disabled={loading} type="submit" className="btn btnPrimary full">
-              {loading ? "Creating..." : "Sign up"}
+            <button className="btn btnPrimary full" type="submit" disabled={loading}>
+              {loading ? "Creating…" : "Create account"}
             </button>
           </form>
 
-          {msg ? <div className="notice" style={{ marginTop: 12 }}><div className="small">{msg}</div></div> : null}
+          {msg && (
+            <div className={msg.ok ? "successBox" : "errorBox"} style={{ marginTop: 14 }}>
+              <div className="small">{msg.text}</div>
+            </div>
+          )}
 
-          <div className="small muted" style={{ marginTop: 14 }}>
-            Already have an account? <a href="/signin"><b>Sign in</b></a>
+          <div className="hr" />
+          <div className="small muted" style={{ textAlign: "center" }}>
+            Already have an account? <Link href="/signin"><b>Sign in</b></Link>
+          </div>
+          <div className="small muted" style={{ textAlign: "center", marginTop: 10 }}>
+            By joining you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.
           </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

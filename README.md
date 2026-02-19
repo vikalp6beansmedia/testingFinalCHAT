@@ -1,92 +1,72 @@
-# CreatorFarm – Phase 6 (Clean Rebuild)
+# CreatorFarm
 
-Clean Phase 6 focused on:
-- Admin settings (prices + Razorpay plan IDs) stored in DB (`TierSettings` singleton)
-- Membership page creates Razorpay subscriptions server-side
+A Patreon-style creator membership platform built with Next.js 14, Prisma, PostgreSQL, and Razorpay.
 
-## Setup
+## Features
 
-1) Install dependencies
+- **Auth:** Email/password, Google OAuth, Magic links (NextAuth)
+- **Password reset:** Forgot password → email link → reset flow
+- **Tiers:** Free, Basic, Pro (Razorpay recurring subscriptions)
+- **Content feed:** Posts with access control (FREE / BASIC / PRO / PAID)
+- **Admin panel:** Create/edit/delete posts, manage creator profile, configure Razorpay plan IDs
+- **Member chat:** 1:1 chat between members and admin (5s polling)
+- **Media uploads:** Upload images/videos from admin post editor
+- **Legal:** Terms of Service and Privacy Policy pages
+- **Rate limiting:** Signup and auth routes protected against abuse
+
+---
+
+## Quick Deploy (Vercel + Neon)
+
+### 1. Database
+
+Create a free PostgreSQL database at https://neon.tech or https://supabase.com. Copy the connection string.
+
+### 2. Clone & Install
+
 ```bash
 npm install
 ```
 
-2) Create `.env` from `.env.example`
+### 3. Environment Variables
 
-3) Push DB schema
+Copy `.env.example` to `.env.local` and fill in all values:
+
 ```bash
-npx prisma db push
-npx prisma generate
+cp .env.example .env.local
 ```
 
-4) Run
-```bash
-npm run dev
-```
+Key values you MUST set:
+- DATABASE_URL – your Postgres connection string
+- NEXTAUTH_URL – your site URL (e.g. https://yourapp.vercel.app)
+- NEXTAUTH_SECRET – run: openssl rand -base64 32
+- ADMIN_EMAIL + ADMIN_PASSWORD – your admin login
+- RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET + RAZORPAY_WEBHOOK_SECRET
+- EMAIL_SERVER_* + EMAIL_FROM – for magic links and password reset
 
-## Flow
-
-1. Go to `/signin` and login using `ADMIN_EMAIL` + `ADMIN_PASSWORD`
-2. Go to `/admin/settings` and save plan IDs:
-   - `razorpayBasicPlanId`
-   - `razorpayProPlanId`
-3. Go to `/membership` and click Join Basic / Join Pro
-
-## Why this avoids your earlier issues
-- No nodemailer (so no `Can't resolve 'nodemailer'`)
-- No `@/app/*` alias mistakes. All imports use `@/lib/...` which maps to `app/lib/...`
-- Uses exact Prisma column names: `razorpayBasicPlanId`, `razorpayProPlanId`
-
-
-## Phase 6+ (Auth + Razorpay + Chat)
-
-### Required env vars
-Auth:
-- NEXTAUTH_URL
-- NEXTAUTH_SECRET
-- ADMIN_EMAIL (optional, for env-admin credentials login)
-- ADMIN_PASSWORD (optional)
-
-Google OAuth:
-- GOOGLE_CLIENT_ID
-- GOOGLE_CLIENT_SECRET
-
-Magic link (SMTP):
-- EMAIL_SERVER_HOST
-- EMAIL_SERVER_PORT
-- EMAIL_SERVER_USER
-- EMAIL_SERVER_PASSWORD
-- EMAIL_FROM
-
-Razorpay:
-- RAZORPAY_KEY_ID
-- RAZORPAY_KEY_SECRET
-- RAZORPAY_WEBHOOK_SECRET
-
-DB:
-- DATABASE_URL
-
-### After pulling new schema
-Run one of these (recommended):
-- `npx prisma db push`
-- or `npx prisma migrate dev`
-
-Then:
-- `npm install`
-- `npm run dev`
-
-## Posts Feed (Patreon-style)
-
-- Home (`/`) shows a posts feed.
-- If a user is not subscribed, locked posts show blurred preview with an unlock CTA.
-- Admin can create / edit / delete posts at `/admin/posts`.
-
-### Migration
-
-This build includes a migration folder under `prisma/migrations/`.
-
-On production (Vercel) you should run:
+### 4. Run Migrations
 
 ```bash
 npx prisma migrate deploy
 ```
+
+### 5. Deploy to Vercel
+
+Add all .env.local values as environment variables in the Vercel dashboard, then deploy.
+
+---
+
+## Razorpay Setup
+
+1. Create plans in Razorpay Dashboard -> Products -> Subscriptions -> Plans
+2. Sign in as admin -> Admin Settings -> paste plan IDs
+3. Add webhook: https://your-domain.com/api/razorpay/webhook
+   Events: subscription.* and payment.*
+
+---
+
+## Email Setup (Gmail)
+
+1. Enable 2FA on Google account
+2. Google Account -> Security -> App Passwords -> create one for Mail
+3. Use that 16-char password as EMAIL_SERVER_PASSWORD
