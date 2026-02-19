@@ -19,6 +19,13 @@ function loadRazorpay(): Promise<boolean> {
   });
 }
 
+const CHECK = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="7.25" stroke="rgba(80,220,150,.45)" strokeWidth="1.5"/>
+    <path d="M4.5 8.5L6.5 10.5L11 5.5" stroke="rgba(80,220,150,.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 export default function MembershipPage() {
   const { data: session } = useSession();
   const isSignedIn = !!session;
@@ -27,6 +34,7 @@ export default function MembershipPage() {
   const [settings, setSettings] = useState<{ basicPrice: number; proPrice: number } | null>(null);
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingTier, setLoadingTier] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/settings").then(r => r.json()).then(d => {
@@ -37,6 +45,7 @@ export default function MembershipPage() {
   async function join(tier: "BASIC" | "PRO") {
     if (!isSignedIn) { window.location.href = "/signin"; return; }
     setLoading(true);
+    setLoadingTier(tier);
     setMsg("Creating subscription…");
     try {
       const res = await fetch("/api/razorpay/subscription/create", {
@@ -45,11 +54,11 @@ export default function MembershipPage() {
         body: JSON.stringify({ tier }),
       });
       const data = await res.json();
-      if (!res.ok) { setMsg(data?.error || "Failed. Please try again."); setLoading(false); return; }
+      if (!res.ok) { setMsg(data?.error || "Failed. Please try again."); setLoading(false); setLoadingTier(null); return; }
 
       if (data?.subscriptionId) {
         const ok = await loadRazorpay();
-        if (!ok || !window.Razorpay) { setMsg("Failed to load Razorpay. Please try again."); setLoading(false); return; }
+        if (!ok || !window.Razorpay) { setMsg("Failed to load Razorpay. Please try again."); setLoading(false); setLoadingTier(null); return; }
         setMsg("Opening payment…");
         const rzp = new window.Razorpay({
           key: data.keyId,
@@ -63,7 +72,7 @@ export default function MembershipPage() {
           notes: data.notes,
           theme: { color: "#6c8eff" },
         });
-        rzp.on("payment.failed", (r: any) => { setMsg(r?.error?.description || "Payment failed."); setLoading(false); });
+        rzp.on("payment.failed", (r: any) => { setMsg(r?.error?.description || "Payment failed."); setLoading(false); setLoadingTier(null); });
         rzp.open();
         return;
       }
@@ -72,24 +81,44 @@ export default function MembershipPage() {
       setMsg(e?.message || "Error");
     }
     setLoading(false);
+    setLoadingTier(null);
   }
 
   const plans = [
     {
       id: "BASIC" as const,
       name: "Basic",
+      emoji: "⭐",
       price: settings?.basicPrice ?? 999,
-      perks: ["Unlock all Basic posts", "Member chat with creator", "Early access drops", "Discord community"],
-      color: "rgba(108,142,255,.15)",
-      border: "rgba(108,142,255,.3)",
+      tagline: "Unlock the essentials",
+      perks: [
+        "All Basic posts & videos",
+        "1:1 chat with the creator",
+        "Early access to new drops",
+        "Member-only community",
+      ],
+      accent: "rgba(108,142,255,1)",
+      accentBg: "rgba(108,142,255,.08)",
+      accentBorder: "rgba(108,142,255,.25)",
+      accentGlow: "rgba(108,142,255,.15)",
     },
     {
       id: "PRO" as const,
       name: "Pro",
+      emoji: "🔥",
       price: settings?.proPrice ?? 1999,
-      perks: ["Everything in Basic", "Unlock Pro exclusive posts", "Priority chat replies", "Behind-the-scenes content", "Monthly Q&A access"],
-      color: "rgba(255,200,80,.10)",
-      border: "rgba(255,200,80,.3)",
+      tagline: "The full experience",
+      perks: [
+        "Everything in Basic",
+        "Pro-exclusive content",
+        "Priority chat replies",
+        "Behind-the-scenes access",
+        "Monthly live Q&A",
+      ],
+      accent: "rgba(255,185,50,1)",
+      accentBg: "rgba(255,185,50,.08)",
+      accentBorder: "rgba(255,185,50,.28)",
+      accentGlow: "rgba(255,185,50,.12)",
       highlight: true,
     },
   ];
@@ -97,86 +126,228 @@ export default function MembershipPage() {
   return (
     <>
       <Nav />
-      <main className="container pagePad" style={{ paddingTop: 24 }}>
-        {/* Hero */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 950, margin: "0 0 10px" }}>Unlock everything</h1>
-          <p className="muted" style={{ maxWidth: 480, margin: "0 auto" }}>
-            Get access to exclusive content, member-only chat, and premium drops.
+
+      <main className="container pagePad" style={{ paddingTop: 40 }}>
+
+        {/* ── Header ── */}
+        <div style={{ textAlign: "center", marginBottom: 44 }}>
+          <div style={{
+            display: "inline-block",
+            padding: "5px 14px", borderRadius: 999,
+            background: "rgba(108,142,255,.10)",
+            border: "1px solid rgba(108,142,255,.22)",
+            fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+            color: "rgba(180,200,255,.85)",
+            marginBottom: 16, textTransform: "uppercase",
+          }}>
+            Membership
+          </div>
+          <h1 style={{
+            margin: "0 0 12px",
+            fontSize: "clamp(28px, 6vw, 42px)",
+            fontWeight: 950,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.1,
+            background: "linear-gradient(135deg, #fff 30%, rgba(180,200,255,.7))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}>
+            Unlock everything
+          </h1>
+          <p className="muted" style={{ maxWidth: 440, margin: "0 auto", lineHeight: 1.7, fontSize: 15 }}>
+            Exclusive content, direct creator chat, and member-only drops — pick the plan that works for you.
           </p>
         </div>
 
-        {/* Current tier banner */}
+        {/* ── Current plan banner ── */}
         {isSignedIn && currentTier !== "NONE" && (
-          <div className="successBox" style={{ marginBottom: 20, textAlign: "center" }}>
-            <div className="small">You're on the <b>{currentTier}</b> plan. Thank you for supporting!</div>
+          <div style={{
+            maxWidth: 640, margin: "0 auto 28px",
+            padding: "12px 20px",
+            borderRadius: 12,
+            background: "rgba(80,220,150,.07)",
+            border: "1px solid rgba(80,220,150,.2)",
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <span style={{ fontSize: 18 }}>✅</span>
+            <span className="small">
+              {"You're on the "}
+              <b style={{ color: "rgba(160,255,210,.95)" }}>{currentTier}</b>
+              {" plan — thank you for your support!"}
+            </span>
           </div>
         )}
 
-        {/* Plans */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, maxWidth: 680, margin: "0 auto" }}>
+        {/* ── Plans grid ── */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))",
+          gap: 16,
+          maxWidth: 680,
+          margin: "0 auto",
+        }}>
           {plans.map(plan => (
-            <div key={plan.id} className="card" style={{ padding: 24, background: plan.color, borderColor: plan.border, position: "relative" }}>
+            <div
+              key={plan.id}
+              className="card"
+              style={{
+                padding: 0, overflow: "hidden",
+                background: plan.accentBg,
+                borderColor: plan.accentBorder,
+                position: "relative",
+                boxShadow: plan.highlight
+                  ? `0 0 40px ${plan.accentGlow}, 0 20px 60px rgba(0,0,0,.4)`
+                  : "0 20px 60px rgba(0,0,0,.35)",
+                transition: "transform .2s, box-shadow .2s",
+              }}
+            >
+              {/* Top line */}
+              <div style={{
+                height: 3,
+                background: `linear-gradient(90deg, transparent, ${plan.accent}, transparent)`,
+                opacity: plan.highlight ? 1 : 0.5,
+              }} />
+
               {plan.highlight && (
-                <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "rgba(255,200,80,.9)", color: "#000", fontWeight: 800, fontSize: 11, padding: "4px 12px", borderRadius: 99, whiteSpace: "nowrap" }}>
-                  MOST POPULAR
+                <div style={{
+                  position: "absolute", top: 16, right: 16,
+                  background: `linear-gradient(135deg, rgba(255,185,50,.95), rgba(255,150,30,.9))`,
+                  color: "#000",
+                  fontWeight: 800, fontSize: 10,
+                  padding: "4px 10px", borderRadius: 99,
+                  letterSpacing: "0.06em", textTransform: "uppercase",
+                }}>
+                  Most popular
                 </div>
               )}
-              <div style={{ fontWeight: 900, fontSize: 22 }}>{plan.name}</div>
-              <div style={{ fontSize: 32, fontWeight: 950, margin: "12px 0 4px" }}>
-                ₹{plan.price}
-                <span className="small muted" style={{ fontWeight: 500, fontSize: 14 }}>/month</span>
+
+              <div style={{ padding: "24px 24px 28px" }}>
+                {/* Plan header */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontSize: 22 }}>{plan.emoji}</span>
+                  <span style={{ fontWeight: 900, fontSize: 20 }}>{plan.name}</span>
+                </div>
+                <div className="small muted" style={{ marginBottom: 20 }}>{plan.tagline}</div>
+
+                {/* Price */}
+                <div style={{ marginBottom: 22 }}>
+                  <span style={{
+                    fontSize: 36, fontWeight: 950, letterSpacing: "-0.03em",
+                    color: plan.highlight ? "rgba(255,200,80,.95)" : "#fff",
+                  }}>
+                    ₹{(settings ? (plan.id === "BASIC" ? settings.basicPrice : settings.proPrice) : plan.price).toLocaleString("en-IN")}
+                  </span>
+                  <span className="small muted" style={{ marginLeft: 6, fontSize: 13 }}>/month</span>
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: "rgba(255,255,255,.07)", marginBottom: 18 }} />
+
+                {/* Perks */}
+                <ul style={{ margin: "0 0 24px", padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
+                  {plan.perks.map(p => (
+                    <li key={p} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      {CHECK}
+                      <span className="small" style={{ lineHeight: 1.4 }}>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <button
+                  className="btn full"
+                  onClick={() => join(plan.id)}
+                  disabled={loading || currentTier === plan.id}
+                  style={{
+                    background: plan.highlight
+                      ? "linear-gradient(135deg, rgba(255,185,50,.95), rgba(255,140,30,.85))"
+                      : "rgba(108,142,255,.2)",
+                    border: `1px solid ${plan.accentBorder}`,
+                    color: plan.highlight ? "#000" : "#fff",
+                    fontWeight: 800,
+                    fontSize: 14,
+                    letterSpacing: "0.01em",
+                    minHeight: 48,
+                  }}
+                >
+                  {currentTier === plan.id
+                    ? "✓ Current plan"
+                    : loadingTier === plan.id
+                    ? "Please wait…"
+                    : `Join ${plan.name} →`}
+                </button>
               </div>
-              <div className="hr" />
-              <ul style={{ margin: "0 0 20px", padding: "0 0 0 4px", listStyle: "none", display: "grid", gap: 8 }}>
-                {plan.perks.map(p => (
-                  <li key={p} className="small" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ color: "rgba(80,220,150,.9)", fontWeight: 700 }}>✓</span> {p}
-                  </li>
-                ))}
-              </ul>
-              <button
-                className={"btn full" + (plan.highlight ? " btnPrimary" : "")}
-                onClick={() => join(plan.id)}
-                disabled={loading || currentTier === plan.id}
-                style={plan.highlight ? {} : { border: `1px solid ${plan.border}` }}
-              >
-                {currentTier === plan.id ? "Current plan" : loading ? "Please wait…" : `Join ${plan.name}`}
-              </button>
             </div>
           ))}
         </div>
 
+        {/* Status msg */}
         {msg && (
-          <div className="notice" style={{ marginTop: 20, maxWidth: 480, margin: "20px auto 0", textAlign: "center" }}>
-            <div className="small">{msg}</div>
+          <div className="notice" style={{
+            maxWidth: 480, margin: "20px auto 0",
+            textAlign: "center", fontSize: 13,
+          }}>
+            {msg}
           </div>
         )}
 
+        {/* Sign in nudge */}
         {!isSignedIn && (
-          <div style={{ textAlign: "center", marginTop: 20 }}>
+          <div style={{ textAlign: "center", marginTop: 24 }}>
             <Link href="/signin" className="btn btnPrimary">Sign in to subscribe</Link>
             <div className="small muted" style={{ marginTop: 10 }}>
-              No account? <Link href="/signup"><b>Create one free</b></Link>
+              {"No account? "}
+              <Link href="/signup" style={{ color: "var(--accent)", fontWeight: 600 }}>Create one free</Link>
             </div>
           </div>
         )}
 
-        {/* FAQ */}
-        <div style={{ maxWidth: 580, margin: "40px auto 0" }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>FAQ</h2>
+        {/* ── Trust strip ── */}
+        <div style={{
+          display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px 20px",
+          maxWidth: 560, margin: "36px auto 0",
+          padding: "16px 20px",
+          borderRadius: 12,
+          background: "rgba(255,255,255,.03)",
+          border: "1px solid rgba(255,255,255,.07)",
+        }}>
           {[
-            ["How do I cancel?", "You can cancel anytime from your Razorpay account. You'll keep access until the end of the billing period."],
+            "🔒 Razorpay secured",
+            "🇮🇳 UPI & cards accepted",
+            "↩ Cancel anytime",
+            "⚡ Instant access",
+          ].map(t => (
+            <span key={t} className="small muted" style={{ fontSize: 12 }}>{t}</span>
+          ))}
+        </div>
+
+        {/* ── FAQ ── */}
+        <div style={{ maxWidth: 580, margin: "44px auto 0" }}>
+          <h2 style={{
+            fontSize: 18, fontWeight: 800, marginBottom: 16,
+            letterSpacing: "-0.02em",
+          }}>
+            Frequently asked questions
+          </h2>
+          {[
+            ["How do I cancel?", "Cancel anytime from your Razorpay account. You keep access until the end of the billing period."],
             ["What payment methods are accepted?", "All major cards, UPI, net banking, and wallets via Razorpay."],
-            ["Can I upgrade from Basic to Pro?", "Yes — cancel your Basic plan and subscribe to Pro. Contact us in chat for help."],
-            ["Will I get a refund if I cancel?", "Subscriptions are non-refundable for the current period. You'll have access until it ends."],
+            ["Can I upgrade from Basic to Pro?", "Yes — cancel Basic and subscribe to Pro. Reach out in chat if you need help with the transition."],
+            ["Will I get a refund if I cancel?", "Subscriptions are non-refundable for the current period. Access continues until it ends."],
           ].map(([q, a]) => (
-            <div key={q} className="card" style={{ padding: 16, marginBottom: 10 }}>
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>{q}</div>
-              <div className="small muted">{a}</div>
+            <div key={q} style={{
+              padding: "14px 18px",
+              marginBottom: 8,
+              borderRadius: 12,
+              background: "rgba(255,255,255,.03)",
+              border: "1px solid rgba(255,255,255,.08)",
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 5 }}>{q}</div>
+              <div className="small muted" style={{ lineHeight: 1.6 }}>{a}</div>
             </div>
           ))}
         </div>
+
       </main>
 
       <footer className="siteFooter">
